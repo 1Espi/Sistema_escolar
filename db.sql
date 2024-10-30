@@ -1,5 +1,5 @@
 -- Crear base de datos
-CREATE DATABASE sistema_control_escolar;
+CREATE DATABASE IF NOT EXISTS sistema_control_escolar;
 USE sistema_control_escolar;
 
 -- Tabla de usuarios
