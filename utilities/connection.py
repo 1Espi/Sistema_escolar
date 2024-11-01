@@ -16,6 +16,7 @@ class MySQLConnection:
         self.user = os.getenv("DB_USER")
         self.password = os.getenv("DB_PASSWORD")
         self.database = os.getenv("DB_NAME")
+
         self.connection = None
     
     def connect(self):
