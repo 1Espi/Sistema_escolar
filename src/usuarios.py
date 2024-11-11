@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, END
 import re
-from utilities.connection import MySQLConnection  # Importa la clase de conexión
-
+from utilities.connection import MySQLConnection  
 class UsuariosFrame(tk.Frame):
     def __init__(self, parent, container):
         super().__init__(container)

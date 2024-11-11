@@ -158,7 +158,7 @@ DROP TABLE IF EXISTS `sistema_control_escolar`.`horarios` ;
 
 CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`horarios` (
   `horario_id` INT NOT NULL AUTO_INCREMENT,
-  `dia` ENUM('Lunes', 'Martes', 'Mi├®rcoles', 'Jueves', 'Viernes', 'S├íbado') NOT NULL,
+  `dia` ENUM('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado') NOT NULL,
   `hora_inicio` TIME NOT NULL,
   `hora_fin` TIME NOT NULL,
   PRIMARY KEY (`horario_id`))
