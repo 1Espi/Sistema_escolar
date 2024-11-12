@@ -18,8 +18,8 @@ class AlumnosFrame(tk.Frame):
         self.todos_los_usuarios = None
 
         self.setup_ui()
-        self.cargar_carreras()
         self.cargar_usuarios()
+        self.cargar_carreras()
 
     def setup_ui(self):
         title = tk.Label(self, text="Alumnos", font=("Helvetica", 16, "bold"))
@@ -107,6 +107,7 @@ class AlumnosFrame(tk.Frame):
         self.todas_las_carreras = result.copy()
         
     def cargar_usuarios(self):
+        self.todos_los_usuarios = None
         query = """
                     SELECT usuario_id 
                     FROM usuarios 
@@ -115,7 +116,6 @@ class AlumnosFrame(tk.Frame):
                 """
         result = self.db_connection.fetch_all(query)
         self.todos_los_usuarios = result.copy()
-        
         
     def cargar_materias(self, event):
         carrera_nombre = self.entry_carrera.get()
@@ -206,6 +206,8 @@ class AlumnosFrame(tk.Frame):
         self.entry_carrera.config(state="normal")
         
     def buscar_alumno(self):
+        self.cargar_usuarios()
+        self.entry_id.config(values=self.todos_los_usuarios)
         id_alumno = self.id_busqueda.get()
         if not id_alumno:
             messagebox.showerror("Error", "Ingrese un id a buscar")
@@ -249,6 +251,10 @@ class AlumnosFrame(tk.Frame):
             self.cancelar_alumno()
             return
         
+        nombres_carreras = [item[0] for item in self.todas_las_carreras]
+        nombres_carreras.remove(carrera_nombre)
+        self.entry_carrera.config(values=nombres_carreras)
+        
         self.entry_carrera.delete(0, END)
         self.entry_carrera.insert(0, carrera_nombre)
         self.entry_carrera.config(state="readonly")
@@ -269,6 +275,7 @@ class AlumnosFrame(tk.Frame):
         self.button_cancelar.config(state="normal")
     
     def crear_alumno(self):
+        self.cargar_usuarios()
         self.entry_codigo.config(state="normal")
         self.entry_id.config(state="readonly")
         self.entry_carrera.config(state="readonly")
@@ -292,6 +299,7 @@ class AlumnosFrame(tk.Frame):
         self.entry_codigo.delete(0, END)
         self.entry_codigo.insert(0, max_id)
         self.entry_codigo.config(state="disabled")  
+        
 
     
     def guardar_alumno(self):
@@ -320,6 +328,8 @@ class AlumnosFrame(tk.Frame):
         self.db_connection.execute_query(query, (id_usuario, id_carrera, estado, fecha_nacimiento))
         
         messagebox.showinfo("Éxito", "Alumno creado con éxito.")
+        self.cargar_usuarios()
+        self.entry_id.config(values=self.todos_los_usuarios)
         self.cancelar_alumno()
 
 
@@ -354,6 +364,8 @@ class AlumnosFrame(tk.Frame):
         self.db_connection.execute_query(query, (usuario_id, id_carrera, estado, fecha_nacimiento, codigo_alumno))
         
         messagebox.showinfo("Éxito", "Alumno actualizado con éxito.")
+        self.cargar_usuarios()
+        self.entry_id.config(values=self.todos_los_usuarios)
         self.cancelar_alumno()
 
 
@@ -367,6 +379,8 @@ class AlumnosFrame(tk.Frame):
             query = "DELETE FROM alumnos WHERE alumno_id = %s"
             self.db_connection.execute_query(query, (user_id,))
             messagebox.showinfo("Éxito", "Alumno eliminado con éxito.")
+            self.cargar_usuarios()
+            self.entry_id.config(values=self.todos_los_usuarios)
             self.cancelar_alumno()
             
     def cancelar_alumno(self):
