@@ -128,8 +128,8 @@ class CarrerasFrame(tk.Frame):
             messagebox.showerror("Error", "Los semestres deben ser un numero entero")
             return
         
-        query = "INSERT INTO carreras (nombre, descripcion, semestres) VALUES (%s, %s, %s)"
-        self.db_connection.execute_query(query, (nombre, descripcion, semestres))
+        query = "INSERT INTO carreras (carrera_id, nombre, descripcion, semestres) VALUES (%s, %s, %s, %s)"
+        self.db_connection.execute_query(query, (id, nombre, descripcion, semestres))
         messagebox.showinfo("Exito", "Carrera ingresada correctamente")
         self.cancelar_carrera()
     

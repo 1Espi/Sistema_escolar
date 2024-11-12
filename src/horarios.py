@@ -67,8 +67,8 @@ class HorariosFrame(tk.Frame):
         self.button_cancelar.grid(row=6, column=4, sticky="ew", padx=5)
     def desbloquear_campos(self):
         self.entry_dia.config(state="readonly")
-        self.entry_hora_inicio.config(state="normal")
-        self.entry_hora_fin.config(state="normal")
+        self.entry_hora_inicio.config(state="readonly")
+        self.entry_hora_fin.config(state="readonly")
 
     def crear_horario(self):
         self.desbloquear_campos()
@@ -93,7 +93,10 @@ class HorariosFrame(tk.Frame):
         if not (dia and hora_inicio and hora_fin):
             messagebox.showerror("Error", "Todos los campos deben estar llenos.")
             return
-
+        if (hora_inicio>hora_fin):
+            messagebox.showerror("Error", "La hora de fin no puede ser menor a la de inicio")
+            return
+        
         query = "INSERT INTO horarios (horario_id, dia, hora_inicio, hora_fin) VALUES (%s, %s, %s, %s)"
         self.db_connection.execute_query(query, (id, dia, hora_inicio, hora_fin))
         
@@ -170,9 +173,11 @@ class HorariosFrame(tk.Frame):
         self.entry_id.delete(0, END)
         self.entry_id.config(state="disabled")
         self.entry_dia.set("")
-        self.entry_hora_inicio.delete(0, END)
+        self.entry_dia.config(state="disabled")
+
+        self.entry_hora_inicio.set("")
         self.entry_hora_inicio.config(state="disabled")
-        self.entry_hora_fin.delete(0, END)
+        self.entry_hora_fin.set("")
         self.entry_hora_fin.config(state="disabled")
         
         self.button_crear.config(state="normal")
