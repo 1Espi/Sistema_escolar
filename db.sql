@@ -113,7 +113,8 @@ DROP TABLE IF EXISTS `sistema_control_escolar`.`materias` ;
 CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`materias` (
   `materia_id` INT NOT NULL AUTO_INCREMENT,
   `nombre` VARCHAR(100) NOT NULL,
-  `creditos` INT NOT NULL,
+  `creditos` INT NOT NULL DEFAULT 0,
+  `descripcion` TEXT NOT NULL,
   `carrera_id` INT NOT NULL,
   `semestre` INT NOT NULL,
   PRIMARY KEY (`materia_id`),
