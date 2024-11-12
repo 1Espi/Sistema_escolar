@@ -67,7 +67,7 @@ class Menu:
             self.menu_window.destroy()
 
     def handle_menu_action(self, action):
-        if self.current_frame:
+        if self.current_frame :
             self.current_frame.destroy()  # Eliminar el frame actual
         
         self.welcome_label.forget()
