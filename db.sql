@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`carreras` (
   `carrera_id` INT NOT NULL AUTO_INCREMENT,
   `nombre` VARCHAR(100) NOT NULL,
   `descripcion` TEXT NULL DEFAULT NULL,
+  `semestres` INT NOT NULL,
   PRIMARY KEY (`carrera_id`))
 ENGINE = InnoDB
 DEFAULT CHARACTER SET = utf8mb4
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`alumnos` (
   `alumno_id` INT NOT NULL AUTO_INCREMENT,
   `usuario_id` INT NOT NULL,
   `carrera_id` INT NOT NULL,
-  `estado` INT NOT NULL,
+  `estado` ENUM('Activo', 'Egresado', 'Titulado', 'Baja Temporal', 'Baja Definitiva', 'Intercambio', 'Suspensión', 'Reingreso') NOT NULL,
   `fecha_nacimiento` TIMESTAMP NOT NULL,
   PRIMARY KEY (`alumno_id`),
   UNIQUE INDEX `usuario_id_UNIQUE` (`usuario_id` ASC) VISIBLE,
@@ -158,7 +159,7 @@ DROP TABLE IF EXISTS `sistema_control_escolar`.`horarios` ;
 
 CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`horarios` (
   `horario_id` INT NOT NULL AUTO_INCREMENT,
-  `dia` ENUM('Lunes', 'Martes', 'Mi├®rcoles', 'Jueves', 'Viernes', 'S├íbado') NOT NULL,
+  `dia` ENUM('Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado') NOT NULL,
   `hora_inicio` TIME NOT NULL,
   `hora_fin` TIME NOT NULL,
   PRIMARY KEY (`horario_id`))
