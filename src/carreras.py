@@ -22,25 +22,25 @@ class CarrerasFrame(tk.Frame):
         
         tk.Label(self, text="Buscar por id:").grid(row=1, column=1, padx=5)
         self.id_busqueda = tk.Entry(self, state="normal")
-        self.id_busqueda.grid(row=1, column=2, padx=5)
+        self.id_busqueda.grid(row=1, column=2, padx=5, pady=20)
         self.button_busqueda = tk.Button(self, text="Buscar", command=self.buscar_carrera)
         self.button_busqueda.grid(row=1, column=3, padx=5)
         
         tk.Label(self, text="Id de carrera:").grid(row=2, column=1, padx=5)
-        self.entry_id = tk.Entry(self, state="normal")
-        self.entry_id.grid(row=2, column=2, padx=5)
+        self.entry_id = tk.Entry(self, state="disabled")
+        self.entry_id.grid(row=2, column=2, padx=5, pady=5)
         
         tk.Label(self, text="Nombre:").grid(row=3, column=1, padx=5)
-        self.entry_nombre = tk.Entry(self, state="normal")
-        self.entry_nombre.grid(row=3, column=2, padx=5)
+        self.entry_nombre = tk.Entry(self, state="disabled")
+        self.entry_nombre.grid(row=3, column=2, padx=5, pady=5)
         
         tk.Label(self, text="Descripción:").grid(row=4, column=1, padx=5)
-        self.entry_descripcion = tk.Entry(self, state="normal")
-        self.entry_descripcion.grid(row=4, column=2, padx=5)
+        self.entry_descripcion = tk.Entry(self, state="disabled")
+        self.entry_descripcion.grid(row=4, column=2, padx=5, pady=5)
         
         tk.Label(self, text="Semestres:").grid(row=5, column=1, padx=5)
-        self.entry_semestres = tk.Entry(self, state="normal")
-        self.entry_semestres.grid(row=5, column=2, padx=5)
+        self.entry_semestres = tk.Entry(self, state="disabled")
+        self.entry_semestres.grid(row=5, column=2, padx=5, pady=5)
         
         #BOTONES
         
