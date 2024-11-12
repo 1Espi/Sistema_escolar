@@ -303,12 +303,13 @@ class AlumnosFrame(tk.Frame):
 
     
     def guardar_alumno(self):
+        id_alumno = self.entry_codigo.get()
         id_usuario=self.entry_id.get()
         carrera_nombre = self.entry_carrera.get()
         estado = self.entry_estado.get()
         fecha_raw = self.entry_fecha_nacimiento.get_date()
 
-        if not id_usuario or not carrera_nombre or not estado or not fecha_raw: 
+        if not id_alumno or not id_usuario or not carrera_nombre or not estado or not fecha_raw: 
             messagebox.showerror("Error", "Todos los campos deben estar llenos.") 
             return
         
@@ -324,8 +325,8 @@ class AlumnosFrame(tk.Frame):
             messagebox.showerror("Error", "No se pudo obtener la carrera para hacer la insercion")
             return
 
-        query = "INSERT INTO alumnos (usuario_id, carrera_id, estado, fecha_nacimiento) VALUES (%s, %s, %s, %s)"
-        self.db_connection.execute_query(query, (id_usuario, id_carrera, estado, fecha_nacimiento))
+        query = "INSERT INTO alumnos (alumno_id, usuario_id, carrera_id, estado, fecha_nacimiento) VALUES (%s, %s, %s, %s, %s)"
+        self.db_connection.execute_query(query, (id_alumno, id_usuario, id_carrera, estado, fecha_nacimiento))
         
         messagebox.showinfo("Éxito", "Alumno creado con éxito.")
         self.cargar_usuarios()
