@@ -128,6 +128,12 @@ class CarrerasFrame(tk.Frame):
             messagebox.showerror("Error", "Los semestres deben ser un numero entero")
             return
         
+        query = "SELECT * FROM carreras WHERE nombre = %s"
+        carrera = self.db_connection.fetch_all(query, (nombre,))[0]
+        if carrera:
+            messagebox.showerror("Error", "Ya existe esa carrera en el sistema")
+            return
+        
         query = "INSERT INTO carreras (carrera_id, nombre, descripcion, semestres) VALUES (%s, %s, %s, %s)"
         self.db_connection.execute_query(query, (id, nombre, descripcion, semestres))
         messagebox.showinfo("Exito", "Carrera ingresada correctamente")

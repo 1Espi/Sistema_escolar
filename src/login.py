@@ -42,6 +42,18 @@ class Login:
                 user = users[0]  # Extraer el primer usuario encontrado
                 stored_password = user[4]  # Índice 4 corresponde a la contraseña en la tupla
                 
+                user_id = user[0]
+                user_type = user[3]
+                if user_type == "Alumno":
+                    query = "SELECT alumno_id, estado FROM alumnos WHERE usuario_id = %s"
+                    students = db.fetch_all(query, (user_id,))
+                    student = students[0]
+                    if student[1] == "Activo":
+                        pass
+                    else:
+                        messagebox.showerror("Error", "El estudiante no está activo en el sistema")
+                        return
+                
                 # Verificar la contraseña
                 if input_password == stored_password:
                     # Guardar la información del usuario
