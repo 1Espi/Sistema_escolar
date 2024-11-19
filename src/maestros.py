@@ -454,6 +454,8 @@ class MaestrosFrame(tk.Frame):
         query = "DELETE FROM maestros_materias WHERE maestro_id = %s"
         self.db_connection.execute_query(query, (maestro_id,))
 
+        self.lista_materias_seleccionadas = []
+
         messagebox.showinfo("Éxito", "Maestro eliminado con éxito.")
         self.cancelar_maestro()
     
@@ -466,6 +468,8 @@ class MaestrosFrame(tk.Frame):
             
         for item in self.tree_materias.get_children():
             self.tree_materias.delete(item)
+            
+        self.lista_materias_seleccionadas = []
             
         self.button_agregar_materia.config(state="disabled")
         self.button_quitar_materia.config(state="disabled")
