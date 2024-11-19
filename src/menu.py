@@ -8,6 +8,7 @@ from .grupos import GruposFrame
 from .horarios import HorariosFrame
 from .carreras import CarrerasFrame
 from .planeacion import PlaneacionFrame
+from .salones import SalonesFrame
 
 class Menu:
     def __init__(self, user_info):
@@ -42,7 +43,7 @@ class Menu:
     def create_menu_buttons(self):
         # Diccionario de acciones según el perfil del usuario
         profile_actions = {
-            "administrador": ["Usuarios", "Alumnos", "Maestros", "Materias", "Grupos", "Horarios", "Carreras", "Planeacion"],
+            "administrador": ["Usuarios", "Alumnos", "Maestros", "Materias", "Grupos", "Horarios", "Carreras", "Planeacion","Salones"],
             "maestro": ["Maestros", "Grupos"],
             "alumno": ["Alumnos", "Horarios", "Planeacion"]
         }
@@ -87,7 +88,8 @@ class Menu:
             "Grupos": GruposFrame, 
             "Horarios": HorariosFrame, 
             "Carreras": CarrerasFrame, 
-            "Planeacion": PlaneacionFrame
+            "Planeacion": PlaneacionFrame,
+            "Salones": SalonesFrame
         }.get(action)
         
         if frame_class:
