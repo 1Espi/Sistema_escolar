@@ -247,6 +247,29 @@ DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 
 
+DROP TABLE IF EXISTS `sistema_control_escolar`.`maestros_materias` ;
+
+CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`maestros_materias` (
+  `maestro_id` INT NOT NULL,
+  `materia_id` INT NOT NULL,
+
+  CONSTRAINT `maestros_materias_ibfk_1`
+    FOREIGN KEY (`maestro_id`)
+    REFERENCES `sistema_control_escolar`.`maestros` (`maestro_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+
+  CONSTRAINT `maestro_materia_ibfk_2`
+    FOREIGN KEY (`materia_id`)
+    REFERENCES `sistema_control_escolar`.`materias` (`materia_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_0900_ai_ci;
+ALTER TABLE maestros_materias ADD UNIQUE INDEX(maestro_id, materia_id);
+
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
