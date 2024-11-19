@@ -97,6 +97,18 @@ class HorariosFrame(tk.Frame):
             messagebox.showerror("Error", "La hora de fin no puede ser menor a la de inicio")
             return
         
+        query_verificar = """
+            SELECT COUNT(*) 
+            FROM horarios 
+            WHERE dia = %s AND hora_inicio = %s AND hora_fin = %s;
+        """
+        resultado = self.db_connection.fetch_one(query_verificar, (dia, hora_inicio, hora_fin))
+
+        if resultado and resultado[0] > 0:
+            messagebox.showerror("Error", "Ya existe un horario con el mismo día, hora de inicio y hora de fin.")
+            return
+
+        
         query = "INSERT INTO horarios (horario_id, dia, hora_inicio, hora_fin) VALUES (%s, %s, %s, %s)"
         self.db_connection.execute_query(query, (id, dia, hora_inicio, hora_fin))
         
