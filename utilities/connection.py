@@ -55,6 +55,15 @@ class MySQLConnection:
         except Error as e:
             messagebox.showerror('Error', f'No se pudieron obtener los resultados de la query\n{e}')
             return None
+        
+    def fetch_one(self, query: str, params: tuple = None):
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(query, params)
+            return cursor.fetchone()
+        except Error as e:
+            messagebox.showerror('Error', f'No se pudo ejecutar la consulta\n{e}')
+            return None
 
     def close_connection(self):
         if self.connection and self.connection.is_connected():

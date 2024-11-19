@@ -34,7 +34,8 @@ class GruposFrame(tk.Frame):
         tk.Label(self, text="Materia:").grid(row=4, column=0, sticky="e", padx=5, pady=5)
         self.combo_materia = ttk.Combobox(self, state="readonly")
         self.combo_materia.grid(row=4, column=1, sticky="w", padx=5)
-        self.combo_materia.bind("<<ComboboxSelected>>", self.cargar_datos_carrera_semestre)
+        self.combo_materia.bind("<<ComboboxSelected>>", self.on_materia_select)
+
 
         tk.Label(self, text="Carrera:").grid(row=5, column=0, sticky="e", padx=5, pady=5)
         self.entry_carrera = tk.Entry(self, state="disabled")
@@ -47,6 +48,8 @@ class GruposFrame(tk.Frame):
         tk.Label(self, text="Maestro:").grid(row=7, column=0, sticky="e", padx=5, pady=5)
         self.combo_maestro = ttk.Combobox(self, state="readonly")
         self.combo_maestro.grid(row=7, column=1, sticky="w", padx=5)
+        self.combo_maestro.bind("<<ComboboxSelected>>", self.on_maestro_select)
+
 
         tk.Label(self, text="Salón:").grid(row=8, column=0, sticky="e", padx=5, pady=5)
         self.combo_salon = ttk.Combobox(self, state="readonly")
@@ -79,27 +82,63 @@ class GruposFrame(tk.Frame):
     def cargar_materias(self):
         query = "SELECT nombre FROM materias"
         result = self.db_connection.fetch_all(query)
+
         if result:
             self.combo_materia['values'] = [row[0] for row in result]
+        else:
+            self.combo_materia['values'] = []
 
-    def cargar_maestros(self):
-        query = """
-            SELECT u.nombre
-            FROM maestros m
-            JOIN usuarios u ON m.usuario_id = u.usuario_id
-            WHERE u.tipo = 'Maestro';
-        """
-        try:
-            result = self.db_connection.fetch_all(query)
-            
-            if result:
-                self.combo_maestro['values'] = [row[0] for row in result]
-            else:
-                self.combo_maestro['values'] = []
-        
-        except Exception as e:
-            print(f"Error al cargar maestros: {e}")
+    def cargar_maestros(self, materia_id=None):
+        if materia_id:
+            query = """
+                SELECT m.maestro_id, u.nombre
+                FROM maestros m
+                JOIN usuarios u ON m.usuario_id = u.usuario_id
+                JOIN maestros_materias mm ON mm.maestro_id = m.maestro_id
+                WHERE mm.materia_id = %s AND u.tipo = 'Maestro';
+            """
+            result = self.db_connection.fetch_all(query, (materia_id,))
+        else:
+            result = []
 
+        if result:
+            self.combo_maestro['values'] = [row[1] for row in result]
+            self.maestros = {row[1]: row[0] for row in result}  # Diccionario maestro_nombre -> maestro_id
+        else:
+            self.combo_maestro['values'] = []
+            self.maestros = {}
+
+    def on_materia_select(self, event):
+        materia_nombre = self.combo_materia.get()
+
+        query = "SELECT materia_id FROM materias WHERE nombre = %s;"
+        result = self.db_connection.fetch_all(query, (materia_nombre,))
+        if result:
+            self.combo_maestro.set("")
+
+            materia_id = result[0][0]
+
+            self.cargar_maestros(materia_id)
+
+            self.cargar_datos_carrera_semestre(materia_nombre)
+        else:
+            self.cargar_maestros()
+            self.entry_carrera.config(state="normal")
+            self.entry_carrera.delete(0, END)
+            self.entry_carrera.config(state="disabled")
+            self.entry_semestre.config(state="normal")
+            self.entry_semestre.delete(0, END)
+            self.entry_semestre.config(state="disabled")
+
+    # lógica de filtrar materias al seleccionar un maestro
+    def on_maestro_select(self, event):
+        # maestro_nombre = self.combo_maestro.get()
+        # maestro_id = self.maestros.get(maestro_nombre)
+        # if maestro_id:
+        #     self.cargar_materias(maestro_id)
+        # else:
+        #     self.cargar_materias()
+        pass  # No se realiza ninguna acción al seleccionar un maestro
 
 
     def cargar_salones(self):
@@ -114,21 +153,29 @@ class GruposFrame(tk.Frame):
         if result:
             self.combo_horario['values'] = [f"{row[0]} - {row[1]} - {row[2]}" for row in result]
 
-    def cargar_datos_carrera_semestre(self, event):
-        materia = self.combo_materia.get()
-        query = "SELECT c.nombre, m.semestre FROM materias m JOIN carreras c ON m.carrera_id = c.carrera_id WHERE m.nombre = %s"
-        result = self.db_connection.fetch_all(query, (materia,))
+    def cargar_datos_carrera_semestre(self, materia_nombre):
+        query = """
+            SELECT c.nombre, m.semestre 
+            FROM materias m 
+            JOIN carreras c ON m.carrera_id = c.carrera_id 
+            WHERE m.nombre = %s
+        """
+        result = self.db_connection.fetch_all(query, (materia_nombre,))
         if result:
             carrera, semestre = result[0]
-            self.entry_carrera.config(state="normal")
-            self.entry_carrera.delete(0, END)
-            self.entry_carrera.insert(0, carrera)
-            self.entry_carrera.config(state="disabled")
-            
-            self.entry_semestre.config(state="normal")
-            self.entry_semestre.delete(0, END)
-            self.entry_semestre.insert(0, semestre)
-            self.entry_semestre.config(state="disabled")
+        else:
+            carrera, semestre = "", ""
+
+        self.entry_carrera.config(state="normal")
+        self.entry_carrera.delete(0, END)
+        self.entry_carrera.insert(0, carrera)
+        self.entry_carrera.config(state="disabled")
+        
+        self.entry_semestre.config(state="normal")
+        self.entry_semestre.delete(0, END)
+        self.entry_semestre.insert(0, semestre)
+        self.entry_semestre.config(state="disabled")
+
 
     def cargar_capacidad_salon(self, event):
         salon = self.combo_salon.get()
@@ -144,7 +191,6 @@ class GruposFrame(tk.Frame):
     def crear_grupo(self):
         self.button_guardar.config(state="normal")
         self.button_crear.config(state="disabled")
-        self.limpiar_campos()
         query = "SELECT MAX(grupo_id) FROM grupos"
         result = self.db_connection.fetch_all(query)
         max_id = result[0][0] + 1 if result[0][0] else 1
@@ -258,8 +304,11 @@ class GruposFrame(tk.Frame):
             
             # Mostrar información en los campos
             grupo = resultado[0]
+            
             self.entry_id.config(state="normal")
+            self.entry_id.delete(0, 'end')
             self.entry_id.insert(0,grupo[0])
+            self.entry_id.config(state="disabled")
             self.entry_nombre.delete(0, 'end')
             self.entry_nombre.insert(0, grupo[1])
             self.combo_salon.set(grupo[2])
@@ -279,15 +328,17 @@ class GruposFrame(tk.Frame):
             self.entry_max_alumnos.insert(0, grupo[10])
             self.entry_max_alumnos.config(state="disabled")
             self.button_actualizar.config(state="normal")
-            self.button_
+            self.button_cancelar.config(state="normal")
+            self.button_crear.config(state="disabled")
+            self.button_eliminar.config(state="normal")
             messagebox.showinfo("Éxito", "Grupo encontrado y cargado.")
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al buscar el grupo: {str(e)}")
 
 
-
     def actualizar_grupo(self):
         try:
+            self.entry_id.config(state="normal")
             grupo_id = self.entry_id.get()
             nombre_grupo = self.entry_nombre.get()
             materia_nombre = self.combo_materia.get()
