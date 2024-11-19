@@ -37,6 +37,15 @@ class MySQLConnection:
             self.connection.commit()
         except Error as e:
             messagebox.showerror('Error', f'No se pudo ejectuar la query\n{e}')
+            
+    def execute_many(self, query: str, params_list: list):
+        try:
+            cursor = self.connection.cursor()
+            cursor.executemany(query, params_list)
+            self.connection.commit()
+        except Error as e:
+            messagebox.showerror('Error', f'No se pudo ejecutar la query\n{e}')
+    
 
     def fetch_all(self, query, params=None):
         try:
