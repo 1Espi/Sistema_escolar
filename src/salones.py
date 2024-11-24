@@ -32,15 +32,15 @@ class SalonesFrame(tk.Frame):
         self.entry_id.grid(row=2, column=1, padx=5, pady=5)
 
         tk.Label(self, text="Nombre salón:").grid(row=3, column=0, padx=5, sticky="e")
-        self.entry_nombre = tk.Entry(self)
+        self.entry_nombre = tk.Entry(self, state="disabled")
         self.entry_nombre.grid(row=3, column=1, padx=5, pady=5)
 
         tk.Label(self, text="Edificio:").grid(row=4, column=0, padx=5, sticky="e")
-        self.combobox_edificio = ttk.Combobox(self, state="readonly",values=self.alfabeto)
+        self.combobox_edificio = ttk.Combobox(self, state="disabled",values=self.alfabeto)
         self.combobox_edificio.grid(row=4, column=1, padx=5, pady=5)
 
         tk.Label(self, text="Capacidad:").grid(row=5, column=0, padx=5, sticky="e")
-        self.entry_capacidad = tk.Entry(self)
+        self.entry_capacidad = tk.Entry(self, state="disabled")
         self.entry_capacidad.grid(row=5, column=1, padx=5, pady=5)
 
         # Botones
@@ -77,7 +77,6 @@ class SalonesFrame(tk.Frame):
             self.entry_id.config(state="disabled")
 
                 # Limpiar otros campos y habilitar para ingreso de datos
-            self.limpiar_campos()
             self.habilitar_campos(True)
 
             # Cambiar el estado de los botones
@@ -91,9 +90,13 @@ class SalonesFrame(tk.Frame):
 
     
     def limpiar_campos(self):
-        self.entry_codigo.delete(0, END)
+        self.entry_id.config(state="normal")
+        self.entry_id.delete(0, END)
+        self.entry_id.config(state="disabled")
+        self.entry_nombre.config(state="normal")
         self.entry_nombre.delete(0, END)
         self.combobox_edificio.set("")
+        self.entry_capacidad.config(state="normal")
         self.entry_capacidad.delete(0, END)
 
     
@@ -108,11 +111,20 @@ class SalonesFrame(tk.Frame):
     
     def guardar_salon(self):
         """Guarda un nuevo salón en la base de datos."""
+        id = self.entry_id.get()
         nombre = self.entry_nombre.get().strip()
         edificio = self.combobox_edificio.get()
         capacidad = self.entry_capacidad.get().strip()
 
         # Validaciones de entrada
+        if not id:
+            messagebox.showerror("Error", "El ID del salón es obligatorio.")
+            return
+        
+        if not id.isdigit():
+            messagebox.showerror("Error", "El ID del salón debe ser un número entero.")
+            return
+        
         if not nombre:
             messagebox.showerror("Error", "El nombre del salón es obligatorio.")
             return
@@ -145,11 +157,11 @@ class SalonesFrame(tk.Frame):
             return
 
         # Insertar el salón en la base de datos
-        query_insert = "INSERT INTO salones (nombre, capacidad) VALUES (%s, %s)"
+        query_insert = "INSERT INTO salones (salon_id, nombre, capacidad) VALUES (%s, %s, %s)"
         try:
-            self.db_connection.execute_query(query_insert, (nombre_salon, capacidad))
+            self.db_connection.execute_query(query_insert, (id, nombre_salon, capacidad))
             messagebox.showinfo("Éxito", "Salón creado con éxito.")
-            self.limpiar_campos()
+            self.cancelar_accion()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo crear el salón: {e}")
     
@@ -197,7 +209,7 @@ class SalonesFrame(tk.Frame):
         try:
             self.db_connection.execute_query(query_update, (nombre_salon, capacidad, salon_id))
             messagebox.showinfo("Éxito", "Salón actualizado con éxito.")
-            self.limpiar_campos()
+            self.cancelar_accion()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo actualizar el salón: {e}")
     
@@ -227,11 +239,14 @@ class SalonesFrame(tk.Frame):
             self.entry_id.insert(0, salon_id)
             self.entry_id.config(state="disabled")
 
+            self.entry_nombre.config(state="normal")
             self.entry_nombre.delete(0, END)
             self.entry_nombre.insert(0, nombre_salon)
 
             self.combobox_edificio.set(edificio)
-
+            self.combobox_edificio.config(state="readonly")
+            
+            self.entry_capacidad.config(state="normal")
             self.entry_capacidad.delete(0, END)
             self.entry_capacidad.insert(0, capacidad)
 
@@ -270,7 +285,6 @@ class SalonesFrame(tk.Frame):
             messagebox.showinfo("Éxito", "El salón ha sido eliminado exitosamente.")
 
             # Limpiar los campos y restablecer la interfaz
-            self.limpiar_campos()
             self.cancelar_accion()  # Volver al estado inicial
 
         except Exception as e:
@@ -282,6 +296,10 @@ class SalonesFrame(tk.Frame):
         """Cancela la acción actual y vuelve al estado inicial."""
         # Limpiar campos
         self.limpiar_campos()
+        
+        self.entry_nombre.config(state="disabled")
+        self.combobox_edificio.config(state="disabled")
+        self.entry_capacidad.config(state="disabled")
 
         # Cambiar el estado de los botones
         self.button_nuevo.config(state="normal")
