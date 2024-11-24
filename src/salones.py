@@ -53,14 +53,14 @@ class SalonesFrame(tk.Frame):
         self.button_guardar = tk.Button(self.frame_botones, text="Guardar", state="disabled", command=self.guardar_salon)
         self.button_guardar.grid(row=0, column=1, padx=5)
 
-        self.button_cancelar = tk.Button(self.frame_botones, text="Cancelar", state="disabled",command=self.cancelar_accion)
-        self.button_cancelar.grid(row=0, column=2, padx=5)
-
         self.button_editar = tk.Button(self.frame_botones, text="Editar", state="disabled",command=self.actualizar_salon)
-        self.button_editar.grid(row=0, column=3, padx=5)
+        self.button_editar.grid(row=0, column=2, padx=5)
 
         self.button_baja = tk.Button(self.frame_botones, text="Baja", state="disabled",command=self.eliminar_salon)
-        self.button_baja.grid(row=0, column=4, padx=5)
+        self.button_baja.grid(row=0, column=3, padx=5)
+        
+        self.button_cancelar = tk.Button(self.frame_botones, text="Cancelar", state="disabled",command=self.cancelar_accion)
+        self.button_cancelar.grid(row=0, column=4, padx=5)
 
     def nuevo_salon(self):
         """Configura el formulario para crear un nuevo salón, mostrando el próximo ID disponible."""
@@ -252,7 +252,6 @@ class SalonesFrame(tk.Frame):
 
 
                 # Cambiar el estado de los botones
-            self.button_buscar.config(state="disabled")
             self.button_guardar.config(state="disabled")
             self.button_nuevo.config(state="disabled")
             self.button_editar.config(state="normal")
