@@ -129,8 +129,9 @@ class CarrerasFrame(tk.Frame):
             return
         
         query = "SELECT * FROM carreras WHERE nombre = %s"
-        carrera = self.db_connection.fetch_all(query, (nombre,))[0]
-        if carrera:
+        result = self.db_connection.fetch_all(query, (nombre,))
+        
+        if result:
             messagebox.showerror("Error", "Ya existe esa carrera en el sistema")
             return
         
