@@ -82,6 +82,8 @@ class MaestrosFrame(tk.Frame):
         self.button_agregar_materia = tk.Button(self, text="Agregar", command=self.agregar_materia, state="disabled")
         self.button_agregar_materia.grid(row=5, column=3, padx=5)
         
+        tk.Label(self, text="Materias que imparte:").grid(row=2, column=4, sticky="s", padx=5, pady=5)
+        
         self.frameTreeview = tk.Frame(self)
         self.frameTreeview.grid(row=3, column=4, rowspan=5, pady=10)
 

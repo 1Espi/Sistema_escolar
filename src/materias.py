@@ -39,30 +39,30 @@ class MateriasFrame(tk.Frame):
         title.grid(row=0, column=0, columnspan=4, pady=10)
         # Campo ID de Materia
         tk.Label(self, text="ID de Materia:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
-        self.entry_id = tk.Entry(self)
+        self.entry_id = tk.Entry(self, state="normal")
         self.entry_id.grid(row=1, column=1, sticky="w", padx=5)
 
         # Campo Nombre de la Materia
         tk.Label(self, text="Nombre:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
-        self.entry_nombre = tk.Entry(self)
+        self.entry_nombre = tk.Entry(self, state="disabled")
         self.entry_nombre.grid(row=2, column=1, sticky="w", padx=5)
 
         # Campo Descripción
         tk.Label(self, text="Descripción:").grid(row=3, column=0, sticky="e", padx=5, pady=5)
-        self.entry_descripcion = tk.Text(self, height=4, width=30)
+        self.entry_descripcion = tk.Text(self, height=4, width=30, state="disabled")
         self.entry_descripcion.grid(row=3, column=1, columnspan=3, padx=5, pady=5)
 
         # Combobox para Carrera
         tk.Label(self, text="Carrera:").grid(row=4, column=0, sticky="e", padx=5, pady=5)
-        self.combo_carrera = ttk.Combobox(self, state="readonly",values=list(self.carreras.keys()))  # Actualizar con datos reales
+        self.combo_carrera = ttk.Combobox(self, state="disabled",values=list(self.carreras.keys()))  # Actualizar con datos reales
         self.combo_carrera.grid(row=4, column=1, sticky="w", padx=5)
         
         tk.Label(self, text="Semestre:").grid(row=5, column=0, sticky="e", padx=5, pady=5)
-        self.entry_semestre = tk.Entry(self)
+        self.entry_semestre = tk.Entry(self, state="disabled")
         self.entry_semestre.grid(row=5, column=1, columnspan=3, padx=5, pady=5, sticky='w')
         
         tk.Label(self, text="Creditos:").grid(row=6, column=0, sticky="e", padx=5, pady=5)
-        self.entry_creditos = tk.Entry(self)
+        self.entry_creditos = tk.Entry(self, state="disabled")
         self.entry_creditos.grid(row=6, column=1, columnspan=3, padx=5, pady=5, sticky='w')
 
         # Botones
@@ -90,6 +90,8 @@ class MateriasFrame(tk.Frame):
         self.entry_nombre.config(state="normal" if desbloquear else "disabled")
         self.entry_descripcion.config(state="normal" if desbloquear else "disabled")
         self.combo_carrera.config(state=estado)
+        self.entry_semestre.config(state="normal" if desbloquear else "disabled")
+        self.entry_creditos.config(state="normal" if desbloquear else "disabled")
 
     def crear_materia(self):
             """Prepara la interfaz para crear una nueva materia."""
@@ -98,9 +100,14 @@ class MateriasFrame(tk.Frame):
             self.button_cancelar.config(state="normal")
             self.button_crear.config(state="disabled")
             self.button_buscar.config(state="disabled")
+            
+            query = "SELECT MAX(materia_id) FROM materias"
+            result = self.db_connection.fetch_all(query)
+            max_id = result[0][0] + 1 if result[0][0] else 1
+            
             self.entry_id.config(state="normal")
             self.entry_id.delete(0, END)
-            self.entry_id.insert(0, "Auto")  # Indica que el ID se generará automáticamente
+            self.entry_id.insert(0, max_id)  # Indica que el ID se generará automáticamente
             self.entry_id.config(state="disabled")
             self.entry_nombre.delete(0, END)
             self.entry_descripcion.delete('1.0', END)
@@ -110,11 +117,20 @@ class MateriasFrame(tk.Frame):
 
     def guardar_materia(self):
         """Guarda una nueva materia en la base de datos."""
+        id = self.entry_id.get()
         nombre = self.entry_nombre.get().strip()
         descripcion = self.entry_descripcion.get('1.0', END).strip()
         carrera_seleccionada = self.combo_carrera.get()
         semestre = self.entry_semestre.get()
         creditos = self.entry_creditos.get()
+
+        if not id:
+            messagebox.showerror("Error", "No se ha especificado un ID para la materia.")
+            return
+        
+        if not id.isdigit():
+            messagebox.showerror("Error", "El ID de la materia debe ser un número entero.")
+            return
 
         if not nombre:
             messagebox.showerror("Error", "El nombre de la materia es obligatorio.")
@@ -140,21 +156,21 @@ class MateriasFrame(tk.Frame):
             messagebox.showerror("Error", "Los creditos deben de ser un entero.")
             return
 
-                # Validación de nombre único de materia
-        query_check = "SELECT COUNT(*) FROM materias WHERE nombre = %s"
-        resultado_check = self.db_connection.fetch_all(query_check, (nombre,))
+        # Obtener el ID de la carrera seleccionada
+        carrera_id = self.carreras.get(carrera_seleccionada, None)
+        
+        # Validación de nombre único de materia
+        query_check = "SELECT COUNT(*) FROM materias WHERE nombre = %s AND carrera_id = %s"
+        resultado_check = self.db_connection.fetch_all(query_check, (nombre, carrera_id))
 
         # Acceder al primer valor de la primera tupla (resultado_check[0][0])
         if resultado_check[0][0] > 0:
-            messagebox.showerror("Error", "Ya existe una materia con ese nombre.")
+            messagebox.showerror("Error", "Ya existe una materia con ese nombre para esta carrera")
             return
 
-
-        carrera_id = self.carreras.get(carrera_seleccionada, None)
-
-        query = "INSERT INTO materias (nombre, descripcion, carrera_id, semestre, creditos) VALUES (%s, %s, %s, %s, %s)"
+        query = "INSERT INTO materias (materia_id, nombre, descripcion, carrera_id, semestre, creditos) VALUES (%s, %s, %s, %s, %s, %s)"
         try:
-            self.db_connection.execute_query(query, (nombre, descripcion if descripcion else None, carrera_id, semestre, creditos))
+            self.db_connection.execute_query(query, (id, nombre, descripcion if descripcion else None, carrera_id, semestre, creditos))
             messagebox.showinfo("Éxito", "Materia creada con éxito.")
             self.limpiar_campos()
         except Exception as e:
@@ -253,17 +269,17 @@ class MateriasFrame(tk.Frame):
             messagebox.showerror("Error", "Los creditos deben de ser un entero.")
             return
         
+        # Obtener el ID de la carrera seleccionada
+        carrera_id = self.carreras.get(carrera_seleccionada, None)
+        
         # Verificación de que no haya una materia con el mismo nombre
-        query_check = "SELECT COUNT(*) FROM materias WHERE nombre = %s AND materia_id != %s"
-        resultado_check = self.db_connection.fetch_all(query_check, (nombre, materia_id))
+        query_check = "SELECT COUNT(*) FROM materias WHERE nombre = %s AND carrera_id = %s AND materia_id != %s"
+        resultado_check = self.db_connection.fetch_all(query_check, (nombre, carrera_id, materia_id))
 
         # Acceder al primer valor de la primera tupla (resultado_check[0][0])
         if resultado_check[0][0] > 0:
-            messagebox.showerror("Error", "Ya existe una materia con ese nombre.")
+            messagebox.showerror("Error", "Ya existe una materia con ese nombre en esa carrera")
             return
-
-
-        carrera_id = self.carreras.get(carrera_seleccionada, None)
 
         query = "UPDATE materias SET nombre = %s, descripcion = %s, carrera_id = %s, semestre = %s, creditos = %s WHERE materia_id = %s"
         try:
