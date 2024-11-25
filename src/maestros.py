@@ -443,6 +443,14 @@ class MaestrosFrame(tk.Frame):
         query = "INSERT IGNORE INTO maestros_materias (maestro_id, materia_id) VALUES (%s, %s)"
         for id in materias:
             self.db_connection.execute_query(query, (maestro_id, id))
+            
+        query = f"""
+            DELETE FROM asignaciones
+            WHERE maestro_id = %s
+            AND materia_id NOT IN ({materias_placeholder});
+        """
+
+        self.db_connection.execute_query(query, (maestro_id,))
         
         messagebox.showinfo("Éxito", "Maestro actualizado con éxito.")
         self.cancelar_maestro()
