@@ -161,7 +161,7 @@ class SalonesFrame(tk.Frame):
         try:
             self.db_connection.execute_query(query_insert, (id, nombre_salon, capacidad))
             messagebox.showinfo("Éxito", "Salón creado con éxito.")
-            self.cancelar_accion()
+            self.limpiar_campos()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo crear el salón: {e}")
     
@@ -209,7 +209,7 @@ class SalonesFrame(tk.Frame):
         try:
             self.db_connection.execute_query(query_update, (nombre_salon, capacidad, salon_id))
             messagebox.showinfo("Éxito", "Salón actualizado con éxito.")
-            self.cancelar_accion()
+            self.limpiar_campos()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo actualizar el salón: {e}")
     

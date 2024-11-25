@@ -143,12 +143,14 @@ class UsuariosFrame(tk.Frame):
             self.button_actualizar.config(state="normal")
             self.button_eliminar.config(state="normal")
             self.button_cancelar.config(state="normal")
+            self.email_inicial = self.entry_email.get()  # Guarda el email original
+
         else:
             messagebox.showinfo("Información", "Usuario no encontrado.")
 
     def guardar_usuario(self):
         self.entry_id.config(state="normal")
-        id=self.entry_id.get()
+        id = self.entry_id.get()
         nombre = self.entry_nombre.get()
         apellido_paterno = self.entry_apellido_paterno.get()
         apellido_materno = self.entry_apellido_materno.get()
@@ -156,23 +158,37 @@ class UsuariosFrame(tk.Frame):
         password = self.entry_password.get()
         perfil = self.entry_perfil.get()
 
-        if not (id and nombre and apellido_paterno and apellido_materno and email and password and perfil): 
-            messagebox.showerror("Error", "Todos los campos deben estar llenos.") 
+        if not (id and nombre and apellido_paterno and apellido_materno and email and password and perfil):
+            messagebox.showerror("Error", "Todos los campos deben estar llenos.")
             return
-        if '@' not in email: 
-            messagebox.showerror("Error", "Por favor, ingresa un correo electrónico válido.") 
+        if '@' not in email:
+            messagebox.showerror("Error", "Por favor, ingresa un correo electrónico válido.")
             return
         if not self.validar_password(password):
             messagebox.showerror("Error", "La contraseña debe tener al menos 6 caracteres, incluir una mayúscula, un número y un símbolo.")
             return
-        
 
-        nombre_completo = f"{nombre} {apellido_paterno} {apellido_materno}"
-        query = "INSERT INTO usuarios (usuario_id, nombre, correo, contrasena, tipo) VALUES (%s, %s, %s, %s, %s)"
-        self.db_connection.execute_query(query, (id, nombre_completo, email, password, perfil))
-        
-        messagebox.showinfo("Éxito", "Usuario creado con éxito.")
-        self.limpiar_campos()
+        try:
+            # Validar que el correo electrónico no esté duplicado
+            query_validacion = "SELECT COUNT(*) FROM usuarios WHERE correo = %s"
+            resultado = self.db_connection.fetch_all(query_validacion, (email,))
+
+            if resultado[0][0] > 0:  # Si ya existe un usuario con este correo
+                messagebox.showerror("Error", "El correo electrónico ya está registrado.")
+                return
+
+            # Insertar el nuevo usuario
+            nombre_completo = f"{nombre} {apellido_paterno} {apellido_materno}"
+            query = "INSERT INTO usuarios (usuario_id, nombre, correo, contrasena, tipo) VALUES (%s, %s, %s, %s, %s)"
+            self.db_connection.execute_query(query, (id, nombre_completo, email, password, perfil))
+
+            messagebox.showinfo("Éxito", "Usuario creado con éxito.")
+            self.limpiar_campos()
+
+        except Exception as e:
+            self.db_connection.connection.rollback()
+            messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
+
 
 
     def actualizar_usuario(self):
@@ -196,14 +212,25 @@ class UsuariosFrame(tk.Frame):
         if not self.validar_password(password):
             messagebox.showerror("Error", "La contraseña debe tener al menos 6 caracteres, incluir una mayúscula, un número y un símbolo.")
             return
+        try:
+            if email != self.email_inicial:
+                # Validar que el correo electrónico no esté duplicado
+                query_validacion = "SELECT COUNT(*) FROM usuarios WHERE correo = %s"
+                resultado = self.db_connection.fetch_all(query_validacion, (email,))
 
-        nombre_completo = f"{nombre} {apellido_paterno} {apellido_materno}"
-        query = "UPDATE usuarios SET nombre = %s, correo = %s, contrasena = %s, tipo = %s WHERE usuario_id = %s"
-        self.db_connection.execute_query(query, (nombre_completo, email, password, perfil, user_id))
-        
-        messagebox.showinfo("Éxito", "Usuario actualizado con éxito.")
-        self.limpiar_campos()
+                if resultado[0][0] > 0:  # Si ya existe un usuario con este correo
+                    messagebox.showerror("Error", "El correo electrónico ya está registrado.")
+                    return            
 
+            nombre_completo = f"{nombre} {apellido_paterno} {apellido_materno}"
+            query = "UPDATE usuarios SET nombre = %s, correo = %s, contrasena = %s, tipo = %s WHERE usuario_id = %s"
+            self.db_connection.execute_query(query, (nombre_completo, email, password, perfil, user_id))
+            
+            messagebox.showinfo("Éxito", "Usuario actualizado con éxito.")
+            self.limpiar_campos()
+        except Exception as e:
+            self.db_connection.connection.rollback()
+            messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
 
     def eliminar_usuario(self):
         user_id = self.id_entry.get()

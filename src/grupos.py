@@ -225,22 +225,6 @@ class GruposFrame(tk.Frame):
                 messagebox.showerror("Error", "Error al obtener información de materia o maestro.")
                 return
 
-            query_asignacion = """
-                INSERT INTO asignaciones (maestro_id, materia_id) 
-                VALUES (%s, %s) 
-                ON DUPLICATE KEY UPDATE asignacion_id = LAST_INSERT_ID(asignacion_id)
-            """
-            self.db_connection.execute_query(query_asignacion, (maestro_id[0][0], materia_id[0][0]))
-            asignacion_id_query = "SELECT LAST_INSERT_ID()"
-            asignacion_id = self.db_connection.fetch_all(asignacion_id_query)[0][0]
-
-            query_salon = "SELECT salon_id FROM salones WHERE nombre = %s"
-            salon_id = self.db_connection.fetch_all(query_salon, (salon_nombre,))
-            if not salon_id:
-                messagebox.showerror("Error", "Error al obtener información del salón.")
-                return
-
-            # Obtener el ID del horario por día, hora_inicio y hora_fin
             horario_parts = horario_info.split(" - ")
             if len(horario_parts) != 3:
                 messagebox.showerror("Error", "El formato del horario es incorrecto.")
@@ -254,6 +238,39 @@ class GruposFrame(tk.Frame):
             horario_id = self.db_connection.fetch_all(query_horario, (dia, hora_inicio, hora_fin))
             if not horario_id:
                 messagebox.showerror("Error", "Error al obtener información del horario.")
+                return
+
+            # Verificar si el maestro ya tiene un grupo en el mismo horario
+            query_validacion = """
+                SELECT g.grupo_id 
+                FROM grupos g
+                JOIN asignaciones a ON g.asignacion_id = a.asignacion_id
+                JOIN horarios h ON g.horario_id = h.horario_id
+                WHERE a.maestro_id = %s AND h.dia = %s AND h.hora_inicio = %s AND h.hora_fin = %s
+            """
+            resultado_validacion = self.db_connection.fetch_all(
+                query_validacion, (maestro_id[0][0], dia, hora_inicio, hora_fin)
+            )
+
+            if resultado_validacion:
+                messagebox.showerror(
+                    "Error", f"El maestro {maestro_nombre} ya tiene asignado un grupo en este horario."
+                )
+                return
+
+            query_asignacion = """
+                INSERT INTO asignaciones (maestro_id, materia_id) 
+                VALUES (%s, %s) 
+                ON DUPLICATE KEY UPDATE asignacion_id = LAST_INSERT_ID(asignacion_id)
+            """
+            self.db_connection.execute_query(query_asignacion, (maestro_id[0][0], materia_id[0][0]))
+            asignacion_id_query = "SELECT LAST_INSERT_ID()"
+            asignacion_id = self.db_connection.fetch_all(asignacion_id_query)[0][0]
+
+            query_salon = "SELECT salon_id FROM salones WHERE nombre = %s"
+            salon_id = self.db_connection.fetch_all(query_salon, (salon_nombre,))
+            if not salon_id:
+                messagebox.showerror("Error", "Error al obtener información del salón.")
                 return
 
             query_grupo = """
@@ -270,6 +287,7 @@ class GruposFrame(tk.Frame):
         except Exception as e:
             self.db_connection.connection.rollback()
             messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
+
 
 
 
@@ -331,10 +349,11 @@ class GruposFrame(tk.Frame):
             self.button_cancelar.config(state="normal")
             self.button_crear.config(state="disabled")
             self.button_eliminar.config(state="normal")
+            self.horario_inicial = self.combo_horario.get()  # Guarda el horario original
+
             messagebox.showinfo("Éxito", "Grupo encontrado y cargado.")
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al buscar el grupo: {str(e)}")
-
 
     def actualizar_grupo(self):
         try:
@@ -388,20 +407,50 @@ class GruposFrame(tk.Frame):
                 messagebox.showerror("Error", "Error al obtener información del salón.")
                 return
 
-            horario_parts = horario_info.split(" - ")
-            if len(horario_parts) != 3:
-                messagebox.showerror("Error", "El formato del horario es incorrecto.")
-                return
-            dia, hora_inicio, hora_fin = horario_parts
-            query_horario = """
-                SELECT horario_id 
-                FROM horarios 
-                WHERE dia = %s AND hora_inicio = %s AND hora_fin = %s
-            """
-            horario_id = self.db_connection.fetch_all(query_horario, (dia, hora_inicio, hora_fin))
-            if not horario_id:
-                messagebox.showerror("Error", "Error al obtener información del horario.")
-                return
+            # Validación del horario solo si cambió
+            if horario_info != self.horario_inicial:
+                horario_parts = horario_info.split(" - ")
+                if len(horario_parts) != 3:
+                    messagebox.showerror("Error", "El formato del horario es incorrecto.")
+                    return
+                dia, hora_inicio, hora_fin = horario_parts
+                query_horario = """
+                    SELECT horario_id 
+                    FROM horarios 
+                    WHERE dia = %s AND hora_inicio = %s AND hora_fin = %s
+                """
+                horario_id = self.db_connection.fetch_all(query_horario, (dia, hora_inicio, hora_fin))
+                if not horario_id:
+                    messagebox.showerror("Error", "Error al obtener información del horario.")
+                    return
+
+                query_validacion = """
+                    SELECT g.grupo_id 
+                    FROM grupos g
+                    JOIN asignaciones a ON g.asignacion_id = a.asignacion_id
+                    JOIN horarios h ON g.horario_id = h.horario_id
+                    WHERE a.maestro_id = %s AND h.dia = %s AND h.hora_inicio = %s AND h.hora_fin = %s
+                """
+                resultado_validacion = self.db_connection.fetch_all(
+                    query_validacion, (maestro_id[0][0], dia, hora_inicio, hora_fin)
+                )
+
+                if resultado_validacion:
+                    messagebox.showerror(
+                        "Error", f"El maestro {maestro_nombre} ya tiene asignado un grupo en este horario."
+                    )
+                    return
+            else:
+                # Si no cambió, usa el horario_id actual
+                query_horario = """
+                    SELECT horario_id 
+                    FROM grupos 
+                    WHERE grupo_id = %s
+                """
+                horario_id = self.db_connection.fetch_all(query_horario, (grupo_id,))
+                if not horario_id:
+                    messagebox.showerror("Error", "Error al obtener el horario actual.")
+                    return
 
             query_grupo = """
                 UPDATE grupos

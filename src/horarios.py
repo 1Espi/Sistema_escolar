@@ -161,11 +161,28 @@ class HorariosFrame(tk.Frame):
             messagebox.showerror("Error", "Todos los campos deben estar llenos.")
             return
 
-        query = "UPDATE horarios SET dia = %s, hora_inicio = %s, hora_fin = %s WHERE horario_id = %s"
-        self.db_connection.execute_query(query, (dia, hora_inicio, hora_fin, horario_id))
-        
-        messagebox.showinfo("Éxito", "Horario actualizado con éxito.")
-        self.limpiar_campos()
+        try:
+            # Verificar si el horario está asignado a un grupo
+            query_verificacion = "SELECT COUNT(*) FROM grupos WHERE horario_id = %s"
+            resultado = self.db_connection.fetch_all(query_verificacion, (horario_id,))
+
+            if resultado[0][0] > 0:  # Si hay registros asociados
+                messagebox.showerror(
+                    "Error", "El horario está asignado a un grupo, no es posible editar."
+                )
+                return
+
+            # Si no está asignado, proceder con la actualización
+            query = "UPDATE horarios SET dia = %s, hora_inicio = %s, hora_fin = %s WHERE horario_id = %s"
+            self.db_connection.execute_query(query, (dia, hora_inicio, hora_fin, horario_id))
+
+            messagebox.showinfo("Éxito", "Horario actualizado con éxito.")
+            self.limpiar_campos()
+
+        except Exception as e:
+            self.db_connection.connection.rollback()
+            messagebox.showerror("Error", f"Ocurrió un error: {str(e)}")
+
 
     def eliminar_horario(self):
         horario_id = self.entry_id.get()
