@@ -269,6 +269,38 @@ DEFAULT CHARACTER SET = utf8mb4
 COLLATE = utf8mb4_0900_ai_ci;
 ALTER TABLE maestros_materias ADD UNIQUE INDEX(maestro_id, materia_id);
 
+DROP TABLE IF EXISTS `sistema_control_escolar`.`acciones` ;
+
+CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`acciones` (
+    descripcion VARCHAR(255) PRIMARY KEY,
+    estado VARCHAR(20) DEFAULT 'activo'
+);
+
+--INSERT INTO acciones (descripcion, estado)
+--VALUES ('pre_registro', 'activo');
+
+DROP TABLE IF EXISTS `sistema_control_escolar`.`pre_registro` ;
+
+CREATE TABLE IF NOT EXISTS `sistema_control_escolar`.`pre_registro` (
+  `alumno_id` INT NOT NULL,
+  `materia_id` INT NOT NULL,
+
+  CONSTRAINT `pre_registro_ibfk_1`
+    FOREIGN KEY (`alumno_id`)
+    REFERENCES `sistema_control_escolar`.`alumnos` (`alumno_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+
+  CONSTRAINT `pre_registro_ibfk_2`
+    FOREIGN KEY (`materia_id`)
+    REFERENCES `sistema_control_escolar`.`materias` (`materia_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB
+DEFAULT CHARACTER SET = utf8mb4
+COLLATE = utf8mb4_0900_ai_ci;
+ALTER TABLE pre_registro ADD UNIQUE INDEX(alumno_id, materia_id);
+
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
