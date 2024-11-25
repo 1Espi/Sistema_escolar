@@ -16,20 +16,35 @@ class AlumnosFrame(tk.Frame):
         
         self.todas_las_carreras = None
         self.todos_los_usuarios = None
-
+        
+        self.lista_combo_disponibles = []
+        self.lista_combo_seleccionadas = []
+        
         self.setup_ui()
         self.cargar_usuarios()
         self.cargar_carreras()
+        
+        if self.user_info['TIPO'].lower() == 'alumno':
+            query = "SELECT alumno_id FROM alumnos WHERE usuario_id = %s"
+            result = self.db_connection.fetch_all(query, (self.user_info['ID'],))
+            if not result:
+                messagebox.showerror("Error", "No se encontró información de alumno asociada a este usuario")
+                return
+            self.id_busqueda.insert(0, result[0][0])
+            self.cancelar_alumno()
 
     def setup_ui(self):
         title = tk.Label(self, text="Alumnos", font=("Helvetica", 16, "bold"))
         title.grid(row=0, column=0, columnspan=4, pady=10)
-
-        tk.Label(self, text="Buscar por código:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+        
         self.id_busqueda = tk.Entry(self, state="normal")
-        self.id_busqueda.grid(row=1, column=1, sticky="w", padx=5)
-        tk.Button(self, text="Buscar", command=self.buscar_alumno).grid(row=1, column=2, padx=5, sticky='w')
-
+        
+        if self.user_info['TIPO'].lower() == 'administrador':
+            tk.Label(self, text="Buscar por código:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+            
+            self.id_busqueda.grid(row=1, column=1, sticky="w", padx=5)
+            tk.Button(self, text="Buscar", command=self.buscar_alumno).grid(row=1, column=2, padx=5, sticky='w')
+        
         #ENTRYS DE LA IZQUIERDA
         tk.Label(self, text="Código de alumno:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
         self.entry_codigo = tk.Entry(self, state="disabled")
@@ -63,14 +78,32 @@ class AlumnosFrame(tk.Frame):
 
         tk.Label(self, text="Fecha de nacimiento:").grid(row=3, column=2, sticky='e', padx=5, pady=4)
         self.entry_fecha_nacimiento = DateEntry(self, state='readonly', width=12, background='darkblue', foreground='white', borderwidth=2)
+        self.entry_fecha_nacimiento.config(state="disabled")
         self.entry_fecha_nacimiento.grid(row=3, column=3, sticky="w", padx=5)
         self.entry_fecha_nacimiento.set_date(datetime.now())
 
         ttk.Label(self, text="Carrera:").grid(row=4, column=2, sticky="e", padx=5, pady=5)
         self.entry_carrera = ttk.Combobox(self, state="disabled")
         self.entry_carrera.grid(row=4, column=3, sticky="w", padx=5)
-        self.entry_carrera.bind("<<ComboboxSelected>>", self.cargar_materias)
+        self.entry_carrera.bind("<<ComboboxSelected>>", self.cargar_grupos)
+        
+        ttk.Label(self, text="Pre Registro:").grid(row=5, column=3, sticky="s", padx=5, pady=5)
+        
+        ttk.Label(self, text="Grupos:").grid(row=6, column=2, sticky="e", padx=5, pady=5)
+        self.combo_materias_disponibles = ttk.Combobox(self, state="disabled")
+        self.combo_materias_disponibles.grid(row=6, column=3, sticky="w", padx=5)
+        self.combo_materias_disponibles.bind("<<ComboboxSelected>>", self.trigger_combo_disponibles)
+        
+        self.button_agregar = tk.Button(self, text="Agregar", command=self.agregar_grupo, state="disabled")
+        self.button_agregar.grid(row=6, column=4, padx=5)
+        
+        ttk.Label(self, text="Seleccionados:").grid(row=7, column=2, sticky="e", padx=5, pady=5)
+        self.combo_materias_seleccionadas = ttk.Combobox(self, state="disabled")
+        self.combo_materias_seleccionadas.grid(row=7, column=3, sticky="w", padx=5)
+        self.combo_materias_seleccionadas.bind("<<ComboboxSelected>>", self.trigger_combo_seleccionadas)
 
+        self.button_quitar = tk.Button(self, text="Quitar", command=self.quitar_grupo, state="disabled")
+        self.button_quitar.grid(row=7, column=4, padx=5)
         
 
         # Configurar la expansión de las columnas en la fila de los botones
@@ -83,23 +116,55 @@ class AlumnosFrame(tk.Frame):
         #BOTONES
         self.frame_botones = tk.Frame(self)
         self.frame_botones.grid(row=8, column=0, columnspan=100, pady=10)
-        
+
         self.button_crear = tk.Button(self.frame_botones, text="Crear", command=self.crear_alumno)
-        self.button_crear.grid(row=0, column=0, padx=5)
-        
         self.button_guardar = tk.Button(self.frame_botones, text="Guardar", command=self.guardar_alumno, state="disabled")
-        self.button_guardar.grid(row=0, column=1, padx=5)
-        
-        self.button_actualizar = tk.Button(self.frame_botones, text="Actualizar", command=self.actualizar_alumno, state="disabled")
-        self.button_actualizar.grid(row=0, column=2, padx=5)
-        
         self.button_eliminar = tk.Button(self.frame_botones, text="Eliminar", command=self.eliminar_alumno, state="disabled")
-        self.button_eliminar.grid(row=0, column=3, padx=5)
-    
+        self.button_actualizar = tk.Button(self.frame_botones, text="Actualizar", command=self.actualizar_alumno, state="disabled")
         self.button_cancelar = tk.Button(self.frame_botones, text="Cancelar", command=self.cancelar_alumno, state="disabled")
+        
+        if self.user_info['TIPO'].lower() == 'administrador':   
+            self.button_crear.grid(row=0, column=0, padx=5)
+            
+            self.button_guardar.grid(row=0, column=1, padx=5)
+            
+            self.button_eliminar.grid(row=0, column=3, padx=5)
+        
+        self.button_actualizar.grid(row=0, column=2, padx=5)
+    
         self.button_cancelar.grid(row=0, column=4, padx=5)
 
     #METODOS PARA CARGAR DATOS
+    
+    def trigger_combo_disponibles(self, event):
+        self.button_agregar.config(state="normal")
+        
+    def trigger_combo_seleccionadas(self, event):
+        self.button_quitar.config(state="normal")
+
+    def agregar_grupo(self):
+        if self.combo_materias_disponibles.get() == "":
+            messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
+            return
+        self.combo_materias_disponibles.get()
+        self.lista_combo_seleccionadas.append(self.combo_materias_disponibles.get())
+        self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
+        self.lista_combo_disponibles.remove(self.combo_materias_disponibles.get())
+        self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
+        self.combo_materias_disponibles.set("")
+        self.button_agregar.config(state="disabled")
+    
+    def quitar_grupo(self):
+        if self.combo_materias_seleccionadas.get() == "":
+            messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
+            return
+        self.combo_materias_seleccionadas.get()
+        self.lista_combo_disponibles.append(self.combo_materias_seleccionadas.get())
+        self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
+        self.lista_combo_seleccionadas.remove(self.combo_materias_seleccionadas.get())
+        self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
+        self.combo_materias_seleccionadas.set("")
+        self.button_quitar.config(state="disabled")
 
     def cargar_carreras(self):
         query = "SELECT nombre, carrera_id FROM carreras"
@@ -117,7 +182,7 @@ class AlumnosFrame(tk.Frame):
         result = self.db_connection.fetch_all(query)
         self.todos_los_usuarios = result.copy()
         
-    def cargar_materias(self, event):
+    def cargar_grupos(self, event):
         carrera_nombre = self.entry_carrera.get()
         carrera_id = None
         for carrera in self.todas_las_carreras:
@@ -129,14 +194,31 @@ class AlumnosFrame(tk.Frame):
             messagebox.showerror("Error", "No se pudo seleccionar la carrera")
             return
         
-        query = "SELECT nombre, materia_id FROM materias WHERE carrera_id = %s"
+        query = """
+            SELECT 
+                m.nombre, 
+                g.grupo_id 
+            FROM 
+                grupos g
+            JOIN 
+                asignaciones a ON g.asignacion_id = a.asignacion_id
+            JOIN 
+                materias m ON a.materia_id = m.materia_id
+            WHERE 
+                m.carrera_id = %s;
+            """
         result = self.db_connection.fetch_all(query, (carrera_id,))
         
         if not result:
-            messagebox.showwarning("Advertencia", "La carrera no tiene materias ofertadas")
+            messagebox.showwarning("Advertencia", "La carrera no tiene grupos creados")
             return
         
-        #AQUI SE LLENARIA UN COMBOBOX PARA AGREGAR MATERIAS A LAS AGENDADAS POR EL ALUMNO
+        self.lista_combo_disponibles = []
+        for grupo in result:
+            if f"{grupo[0]} (ID:{grupo[1]})" not in self.lista_combo_seleccionadas:
+                self.lista_combo_disponibles.append(f"{grupo[0]} (ID:{grupo[1]})")
+        self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
+
 
     def rellenar_datos_usuario(self, event):
         id_usuario = self.entry_id.get()
@@ -174,7 +256,6 @@ class AlumnosFrame(tk.Frame):
     #METODOS PARA REALIZAR LAS FUNCIONES PRINCIPALES
 
     def limpiar_campos(self):
-        self.id_busqueda.delete(0, END)
         
         self.entry_codigo.config(state="normal")
         self.entry_codigo.delete(0, END)
@@ -184,6 +265,19 @@ class AlumnosFrame(tk.Frame):
             entry.delete(0, END)
             
         self.entry_fecha_nacimiento.set_date(datetime.now())
+        
+    def desbloquear_preregistro(self):
+        query = "SELECT estado FROM acciones WHERE descripcion = 'pre_registro'"
+        result = self.db_connection.fetch_all(query)
+        if not result:
+            return
+        if result[0][0] != 'activo':
+            return
+        
+        self.combo_materias_disponibles.config(state="readonly")
+        self.combo_materias_seleccionadas.config(state="readonly")
+        
+        self.cargar_grupos(event=None)
 
     def desbloquear_campos(self):
         self.entry_codigo.config(state="normal")
@@ -265,8 +359,34 @@ class AlumnosFrame(tk.Frame):
                 
         fecha_nacimiento = alumno[4].date()
         self.entry_fecha_nacimiento.set_date(fecha_nacimiento)
+        self.entry_fecha_nacimiento.config(state="normal")
+        
+        query = "SELECT grupo_id FROM pre_registro WHERE alumno_id = %s"
+        result = self.db_connection.fetch_all(query, (id_alumno,))
+        
+        for grupo in result:
+            query = """
+                SELECT 
+                    m.nombre, 
+                    g.grupo_id 
+                FROM 
+                    grupos g
+                JOIN 
+                    asignaciones a ON g.asignacion_id = a.asignacion_id
+                JOIN 
+                    materias m ON a.materia_id = m.materia_id
+                WHERE 
+                    g.grupo_id = %s;
+                """
+            result = self.db_connection.fetch_all(query, (grupo[0],))
+            if not result:
+                continue
+            self.lista_combo_seleccionadas.append(f"{result[0][0]} (ID:{result[0][1]})")
+        
+        self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
         
         self.rellenar_datos_usuario(event=None)
+        self.desbloquear_preregistro()
                 
         self.button_crear.config(state="disabled")
         self.button_guardar.config(state="disabled")
@@ -278,7 +398,8 @@ class AlumnosFrame(tk.Frame):
         self.cargar_usuarios()
         self.entry_codigo.config(state="normal")
         self.entry_id.config(state="readonly")
-        self.entry_carrera.config(state="readonly")
+        self.entry_carrera.config(state="readonly" if self.user_info['TIPO'].lower() == 'administrador' else "disabled")
+        self.entry_fecha_nacimiento.config(state="normal")
         self.entry_estado.config(state="readonly")
         
         self.button_crear.config(state="disabled")
@@ -364,6 +485,26 @@ class AlumnosFrame(tk.Frame):
         query = "UPDATE alumnos SET usuario_id = %s, carrera_id = %s, estado = %s, fecha_nacimiento = %s WHERE alumno_id = %s"
         self.db_connection.execute_query(query, (usuario_id, id_carrera, estado, fecha_nacimiento, codigo_alumno))
         
+        ids_grupos = [re.search(r'\(ID:(\d+)\)', grupo).group(1) for grupo in self.lista_combo_seleccionadas]
+        
+        grupos_placeholder = ",".join([str(id) for id in ids_grupos])
+
+        query = None
+        if grupos_placeholder:
+            query = f"""
+                DELETE FROM pre_registro
+                WHERE alumno_id = %s
+                AND grupo_id NOT IN ({grupos_placeholder});
+            """
+        else:
+            query = "DELETE FROM pre_registro WHERE alumno_id = %s"
+
+        self.db_connection.execute_query(query, (codigo_alumno,))
+        
+        query = "INSERT IGNORE INTO pre_registro (alumno_id, grupo_id) VALUES (%s, %s)"
+        for id in ids_grupos:
+            self.db_connection.execute_query(query, (codigo_alumno, id))
+        
         messagebox.showinfo("Éxito", "Alumno actualizado con éxito.")
         self.cargar_usuarios()
         self.entry_id.config(values=self.todos_los_usuarios)
@@ -385,18 +526,35 @@ class AlumnosFrame(tk.Frame):
             self.cancelar_alumno()
             
     def cancelar_alumno(self):
-        self.id_busqueda.delete(0, END)
         for entry in [self.entry_codigo,  self.entry_id, self.entry_nombre, self.entry_apellido_paterno, self.entry_apellido_materno, self.entry_correo, self.entry_estado, self.entry_carrera]:
             entry.config(state="normal")
             entry.delete(0, END)
             entry.config(state="disabled")
             
         self.entry_fecha_nacimiento.set_date(datetime.now())
+        self.entry_fecha_nacimiento.config(state="disabled")
+        
+        
+        self.combo_materias_disponibles.set("")
+        self.combo_materias_seleccionadas.set("")
+        self.lista_combo_disponibles = []
+        self.lista_combo_seleccionadas = []
+        self.combo_materias_disponibles.config(state="disabled", values=[])
+        self.combo_materias_seleccionadas.config(state="disabled", values=[])
+        
+        self.button_agregar.config(state="disabled")
+        self.button_quitar.config(state="disabled")
         
         self.button_crear.config(state="normal")
         self.button_guardar.config(state="disabled")
         self.button_actualizar.config(state="disabled")
         self.button_eliminar.config(state="disabled")
         self.button_cancelar.config(state="disabled")
+        
+        if self.user_info['TIPO'].lower() == 'alumno':
+            self.buscar_alumno()
+            self.entry_estado.config(state="disabled")
+            self.entry_fecha_nacimiento.config(state="disabled")
+            self.entry_carrera.config(state="disabled")
         
 
