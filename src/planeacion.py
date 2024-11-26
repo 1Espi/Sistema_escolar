@@ -46,7 +46,15 @@ class PlaneacionFrame(tk.Frame):
         self.fill_items(start_row=1)
 
     def fill_items(self, start_row=0):
-        alumno_id = self.user_info['ID']  # ID del alumno logeado
+        usuario_id = self.user_info['ID']  # ID del alumno logeado
+
+        query = "SELECT alumno_id FROM alumnos WHERE usuario_id = %s;"
+        result = self.db_connection.fetch_one(query, (usuario_id,))
+        if not result:
+            messagebox.showerror("Error", "No se encontró el ID del alumno.")
+            return
+        
+        alumno_id = result[0]
 
         query = """
             SELECT g.nombre AS 'grupo', h.dia, h.hora_inicio, h.hora_fin, s.nombre AS 'salon', 
