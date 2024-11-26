@@ -368,6 +368,7 @@ class AlumnosFrame(tk.Frame):
         
     #funcion para cargar los grupos de una carrera
     def cargar_grupos(self, event):
+        codigo_alumno = self.entry_codigo.get()
         carrera_nombre = self.entry_carrera.get()
         carrera_id = None
         for carrera in self.todas_las_carreras:
@@ -397,7 +398,6 @@ class AlumnosFrame(tk.Frame):
         
         if not result:
             messagebox.showwarning("Advertencia", "La carrera no tiene grupos creados")
-            return
         
         #se guarda la informacion en el combobox como "nombre_materia (ID:grupo_id)"
         self.lista_combo_disponibles = []
@@ -405,6 +405,16 @@ class AlumnosFrame(tk.Frame):
             if f"{grupo[0]} (ID:{grupo[1]})" not in self.lista_combo_seleccionadas:
                 self.lista_combo_disponibles.append(f"{grupo[0]} (ID:{grupo[1]})")
         self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
+        
+        query = "SELECT carrera_id FROM alumnos WHERE alumno_id = %s"
+        
+        result = self.db_connection.fetch_all(query, (codigo_alumno,))
+        
+        if result:
+            if result[0][0] != carrera_id:
+                self.lista_combo_seleccionadas = []
+                self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
+        
 
     #funcion para rellenar los datos del usuario
     def rellenar_datos_usuario(self, event):
@@ -540,7 +550,6 @@ class AlumnosFrame(tk.Frame):
             return
         
         nombres_carreras = [item[0] for item in self.todas_las_carreras]
-        nombres_carreras.remove(carrera_nombre)
         self.entry_carrera.config(values=nombres_carreras)
         
         self.entry_carrera.delete(0, END)
@@ -559,6 +568,7 @@ class AlumnosFrame(tk.Frame):
         result = self.db_connection.fetch_all(query, (id_alumno,))
         
         #obtener nombre de la materia e id del grupo para mostrar en el combobox
+        self.lista_combo_seleccionadas = []
         for grupo in result:
             query = """
                 SELECT 
@@ -681,6 +691,11 @@ class AlumnosFrame(tk.Frame):
                 id_carrera = carrera[1]
                 break
             
+        if not id_carrera:
+            messagebox.showerror("Error", "No se pudo obtener la carrera para hacer la actualizacion")
+            return
+
+         
         fecha_nacimiento = datetime.strftime(fecha_raw, '%Y-%m-%d %H:%M:%S')
 
         query = "UPDATE alumnos SET usuario_id = %s, carrera_id = %s, estado = %s, fecha_nacimiento = %s WHERE alumno_id = %s"
