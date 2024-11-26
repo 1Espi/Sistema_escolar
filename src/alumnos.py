@@ -183,7 +183,7 @@ class AlumnosFrame(tk.Frame):
             messagebox.showerror("Error", f"Error al gestionar el prerregistro: {e}")
 
 
-    def generarInscripcionesEnBaseAlPreregistro(self):
+    def generarInscripcionesEnBaseAlPreregistro(self): 
         try:
             # Obtener los registros del pre_registro
             query_preregistro = "SELECT alumno_id, grupo_id FROM pre_registro"
@@ -207,12 +207,29 @@ class AlumnosFrame(tk.Frame):
 
                 salon_id = grupo[0]  # Usar el índice para obtener salon_id
 
-                # Verificar si hay espacio disponible en el salón
-                query_salon = "SELECT capacidad FROM salones WHERE salon_id = %s"
-                salon = self.db_connection.fetch_one(query_salon, (salon_id,))
+                # Obtener la capacidad máxima del salón
+                query_salon_capacidad = "SELECT capacidad FROM salones WHERE salon_id = %s"
+                salon = self.db_connection.fetch_one(query_salon_capacidad, (salon_id,))
 
-                if not salon or salon[0] <= 0:  # Usar el índice para verificar capacidad
-                    messagebox.showwarning("Prerregistro", f"No hay espacio disponible en el salón con el ID {salon_id}.")
+                if not salon:
+                    messagebox.showwarning("Prerregistro", f"No se encontró el salón con el ID {salon_id}.")
+                    continue
+
+                capacidad_maxima = salon[0]  # Usar el índice para obtener capacidad
+
+                # Contar las inscripciones actuales en el grupo/salón
+                query_inscripciones = """
+                    SELECT COUNT(*) 
+                    FROM inscripciones 
+                    WHERE grupo_id = %s
+                """
+                inscripciones_actuales = self.db_connection.fetch_one(query_inscripciones, (grupo_id,))[0]
+
+                if inscripciones_actuales >= capacidad_maxima:
+                    messagebox.showwarning(
+                        "Prerregistro",
+                        f"No hay espacio disponible en el salón con el ID {salon_id}. Capacidad máxima alcanzada."
+                    )
                     continue
 
                 # Generar inscripción
@@ -221,10 +238,6 @@ class AlumnosFrame(tk.Frame):
                     VALUES (%s, %s)
                 """
                 self.db_connection.execute_query(insert_inscripcion, (alumno_id, grupo_id))
-
-                # Restar espacio en el salón
-                update_salon = "UPDATE salones SET capacidad = capacidad - 1 WHERE salon_id = %s"
-                self.db_connection.execute_query(update_salon, (salon_id,))
 
             # Eliminar registros del pre_registro después de procesarlos
             delete_preregistro = "DELETE FROM pre_registro"
@@ -240,66 +253,98 @@ class AlumnosFrame(tk.Frame):
 
     def agregar_grupo(self):
         if self.combo_materias_disponibles.get() == "":
-            messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
+            messagebox.showerror("Error", "No se ha seleccionado ningún grupo")
             return
-        
+
+        # Obtener el nombre y ID del grupo a agregar
         materia_a_agregar = re.search(r'(.+) \(ID:\d+\)', self.combo_materias_disponibles.get()).group(1)
-        
-        ids_grupos_seleccionados = [re.search(r'\(ID:(\d+)\)', grupo).group(1) for grupo in self.lista_combo_seleccionadas]
-        nombres_materias_seleccionadas = [re.search(r'(.+) \(ID:\d+\)', grupo).group(1) for grupo in self.lista_combo_seleccionadas]
-        
         id_grupo_a_agregar = re.search(r'\(ID:(\d+)\)', self.combo_materias_disponibles.get()).group(1)
-        
+
+        # Verificar si el grupo ya está en la lista seleccionada
+        nombres_materias_seleccionadas = [re.search(r'(.+) \(ID:\d+\)', grupo).group(1) for grupo in self.lista_combo_seleccionadas]
         if materia_a_agregar in nombres_materias_seleccionadas:
             messagebox.showerror("Error", "No se puede agregar la misma materia dos veces")
             return
-        
-        query = """
-                SELECT 
-                    g1.grupo_id AS grupo_1,
-                    g2.grupo_id AS grupo_2,
-                    h1.dia AS dia_conflicto,
-                    h1.hora_inicio AS inicio_grupo_1,
-                    h1.hora_fin AS fin_grupo_1,
-                    h2.hora_inicio AS inicio_grupo_2,
-                    h2.hora_fin AS fin_grupo_2,
-                    h2.dia AS segundo_dia_conflicto
-                FROM grupos g1
-                JOIN horarios h1 ON g1.horario_id = h1.horario_id
-                JOIN grupos g2 ON g2.grupo_id != g1.grupo_id
-                JOIN horarios h2 ON g2.horario_id = h2.horario_id
-                WHERE g1.grupo_id = %s -- ID del grupo a comprobar
-                AND g2.grupo_id = %s -- ID del grupo a confirmar
-                AND h1.dia = h2.dia
-                AND h1.hora_inicio < h2.hora_fin
-                AND h1.hora_fin > h2.hora_inicio
-            """
-        
+
+       # Verificar si el grupo tiene cupo disponible (incluyendo preinscripciones)
+        query_cupo = """
+            SELECT 
+                s.capacidad,
+                COALESCE(COUNT(i.alumno_id), 0) AS inscritos,
+                COALESCE(COUNT(pr.alumno_id), 0) AS preinscritos
+            FROM grupos g
+            JOIN salones s ON g.salon_id = s.salon_id
+            LEFT JOIN inscripciones i ON g.grupo_id = i.grupo_id
+            LEFT JOIN pre_registro pr ON g.grupo_id = pr.grupo_id
+            WHERE g.grupo_id = %s
+            GROUP BY s.capacidad;
+        """
+        resultado = self.db_connection.fetch_one(query_cupo, (id_grupo_a_agregar,))
+
+        if resultado:
+            capacidad, inscritos, preinscritos = resultado
+            total_alumnos = inscritos + preinscritos
+            if total_alumnos >= capacidad:
+                messagebox.showerror(
+                    "Error", 
+                    f"El grupo con ID {id_grupo_a_agregar} ya está lleno. "
+                    f"(Capacidad máxima: {capacidad}, Inscritos: {inscritos}, Preinscritos: {preinscritos})."
+                )
+                return
+        else:
+            messagebox.showerror("Error", "No se encontró información sobre el grupo.")
+            return
+
+        # Validación de conflictos de horario
+        ids_grupos_seleccionados = [re.search(r'\(ID:(\d+)\)', grupo).group(1) for grupo in self.lista_combo_seleccionadas]
+        query_conflicto_horario = """
+            SELECT 
+                g1.grupo_id AS grupo_1,
+                g2.grupo_id AS grupo_2,
+                h1.dia AS dia_conflicto,
+                h1.hora_inicio AS inicio_grupo_1,
+                h1.hora_fin AS fin_grupo_1,
+                h2.hora_inicio AS inicio_grupo_2,
+                h2.hora_fin AS fin_grupo_2,
+                h2.dia AS segundo_dia_conflicto
+            FROM grupos g1
+            JOIN horarios h1 ON g1.horario_id = h1.horario_id
+            JOIN grupos g2 ON g2.grupo_id != g1.grupo_id
+            JOIN horarios h2 ON g2.horario_id = h2.horario_id
+            WHERE g1.grupo_id = %s -- ID del grupo a comprobar
+            AND g2.grupo_id = %s -- ID del grupo a confirmar
+            AND h1.dia = h2.dia
+            AND h1.hora_inicio < h2.hora_fin
+            AND h1.hora_fin > h2.hora_inicio
+        """
+
         for id in ids_grupos_seleccionados:
-            result = self.db_connection.fetch_all(query, (id_grupo_a_agregar, id))
+            result = self.db_connection.fetch_all(query_conflicto_horario, (id_grupo_a_agregar, id))
             if result:
                 messagebox.showerror("Error", f"""No se puede agregar este grupo\nEl horario del grupo {result[0][0]} de {result[0][3]} a {result[0][4]} el {result[0][2]}\nEntra en conflicto con el grupo {result[0][1]} de {result[0][5]} a {result[0][6]} el {result[0][7]}\n""")
                 return
-      
+
+        # Agregar grupo si pasa todas las validaciones
         self.lista_combo_seleccionadas.append(self.combo_materias_disponibles.get())
         self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
         self.lista_combo_disponibles.remove(self.combo_materias_disponibles.get())
         self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
         self.combo_materias_disponibles.set("")
         self.button_agregar.config(state="disabled")
-    
-    #funcion del boton de quitar grupo (preregistro)
-    def quitar_grupo(self):
-        if self.combo_materias_seleccionadas.get() == "":
-            messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
-            return
-        self.combo_materias_seleccionadas.get()
-        self.lista_combo_disponibles.append(self.combo_materias_seleccionadas.get())
-        self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
-        self.lista_combo_seleccionadas.remove(self.combo_materias_seleccionadas.get())
-        self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
-        self.combo_materias_seleccionadas.set("")
-        self.button_quitar.config(state="disabled")
+
+        
+        #funcion del boton de quitar grupo (preregistro)
+        def quitar_grupo(self):
+            if self.combo_materias_seleccionadas.get() == "":
+                messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
+                return
+            self.combo_materias_seleccionadas.get()
+            self.lista_combo_disponibles.append(self.combo_materias_seleccionadas.get())
+            self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
+            self.lista_combo_seleccionadas.remove(self.combo_materias_seleccionadas.get())
+            self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
+            self.combo_materias_seleccionadas.set("")
+            self.button_quitar.config(state="disabled")
 
     #funcion para cargar todas las carreras
     def cargar_carreras(self):
