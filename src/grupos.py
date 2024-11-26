@@ -485,20 +485,36 @@ class GruposFrame(tk.Frame):
                 return
 
             # Verificar si hay registros asociados en pre_registro
-            query_verificar = "SELECT COUNT(*) FROM pre_registro WHERE grupo_id = %s"
-            registros_asociados = self.db_connection.fetch_all(query_verificar, (grupo_id,))
+            query_preregistro = "SELECT COUNT(*) FROM pre_registro WHERE grupo_id = %s"
+            registros_preregistro = self.db_connection.fetch_all(query_preregistro, (grupo_id,))
 
-            if registros_asociados[0][0] > 0:
-                messagebox.showerror(
-                    "Error", 
-                    "No se puede eliminar este grupo porque tiene registros asociados en el pre-registro."
+            # Verificar si hay registros asociados en inscripciones
+            query_inscripciones = "SELECT COUNT(*) FROM inscripciones WHERE grupo_id = %s"
+            registros_inscripciones = self.db_connection.fetch_all(query_inscripciones, (grupo_id,))
+
+            # Mostrar mensajes según los casos
+            if registros_preregistro[0][0] > 0:
+                respuesta = messagebox.askyesno(
+                    "Confirmar",
+                    "Hay alumnos registrados en el pre-registro. ¿Estás seguro de eliminar el grupo?"
                 )
-                return
+                if not respuesta:
+                    return
 
+            if registros_inscripciones[0][0] > 0:
+                respuesta = messagebox.askyesno(
+                    "Confirmar",
+                    "Hay alumnos inscritos formalmente en este grupo. ¿Estás seguro de eliminar el grupo?"
+                )
+                if not respuesta:
+                    return
+
+            # Confirmación general de eliminación si no hay casos previos
             respuesta = messagebox.askyesno("Confirmar", "¿Estás seguro de que deseas eliminar este grupo?")
             if not respuesta:
                 return
 
+            # Eliminar el grupo
             query = "DELETE FROM grupos WHERE grupo_id = %s"
             self.db_connection.execute_query(query, (grupo_id,))
             self.db_connection.connection.commit()
@@ -510,7 +526,6 @@ class GruposFrame(tk.Frame):
         except Exception as e:
             self.db_connection.connection.rollback()
             messagebox.showerror("Error", f"Ocurrió un error al eliminar el grupo: {str(e)}")
-
 
 
     def limpiar_campos(self):
