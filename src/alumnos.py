@@ -169,6 +169,8 @@ class AlumnosFrame(tk.Frame):
                     respuesta = messagebox.askyesno("Prerregistro Inactivo", 
                                                     "El prerregistro está inactivo. ¿Desea activarlo?")
                     if respuesta:
+                        delete_query = "DELETE FROM inscripciones;"
+                        self.db_connection.execute_query(delete_query)
                         update_query = "UPDATE acciones SET estado = 'activo' WHERE descripcion = 'pre_registro'"
                         self.db_connection.execute_query(update_query)
                         messagebox.showinfo("Prerregistro", "El prerregistro se ha activado exitosamente.")
