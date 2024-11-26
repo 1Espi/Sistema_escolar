@@ -45,7 +45,7 @@ class Menu:
         profile_actions = {
             "administrador": ["Usuarios", "Alumnos", "Maestros", "Materias", "Grupos", "Horarios", "Carreras", "Planeacion","Salones"],
             "maestro": ["Maestros", "Grupos"],
-            "alumno": ["Alumnos", "Horarios", "Planeacion"]
+            "alumno": ["Alumnos", "Planeacion"]
         }
 
         # Obtener las acciones permitidas según el perfil del usuario
