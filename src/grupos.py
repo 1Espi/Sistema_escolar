@@ -235,6 +235,31 @@ class GruposFrame(tk.Frame):
                 messagebox.showerror("Error", "El formato del horario es incorrecto.")
                 return
             dia, hora_inicio, hora_fin = horario_parts
+            
+            # Validar superposición de horarios en el salón
+            query_validacion_salon = """
+                SELECT g.grupo_id 
+                FROM grupos g
+                JOIN horarios h ON g.horario_id = h.horario_id
+                JOIN salones s ON g.salon_id = s.salon_id
+                WHERE s.nombre = %s AND h.dia = %s
+                AND (
+                    (h.hora_inicio < %s AND h.hora_fin > %s) OR 
+                    (h.hora_inicio < %s AND h.hora_fin > %s) OR
+                    (h.hora_inicio >= %s AND h.hora_fin <= %s)
+                )
+            """
+            resultado_validacion_salon = self.db_connection.fetch_all(
+                query_validacion_salon, 
+                (salon_nombre, dia, hora_fin, hora_fin, hora_inicio, hora_inicio, hora_inicio, hora_fin)
+            )
+
+            if resultado_validacion_salon:
+                messagebox.showerror(
+                    "Error", "El salón ya está asignado a otro grupo en este horario. Seleccione otro."
+                )
+                return
+            
             query_horario = """
                 SELECT horario_id 
                 FROM horarios 
@@ -277,7 +302,20 @@ class GruposFrame(tk.Frame):
             if not salon_id:
                 messagebox.showerror("Error", "Error al obtener información del salón.")
                 return
+            
+            # Validar que el nombre de grupo no se repita para la misma materia (considerando asignaciones)
+            query_validacion = """
+                SELECT g.grupo_id 
+                FROM grupos g
+                JOIN asignaciones a ON g.asignacion_id = a.asignacion_id
+                WHERE g.nombre = %s AND a.materia_id = %s
+            """
+            result_validacion = self.db_connection.fetch_all(query_validacion, (nombre_grupo, materia_id[0][0]))
 
+            if result_validacion:
+                messagebox.showerror("Error", f"Ya existe un grupo con el nombre '{nombre_grupo}' para la materia '{materia_nombre}'.")
+                return
+            
             query_grupo = """
                 INSERT INTO grupos (grupo_id, nombre, asignacion_id, salon_id, horario_id) 
                 VALUES (%s, %s, %s, %s, %s)
@@ -355,6 +393,8 @@ class GruposFrame(tk.Frame):
             self.button_crear.config(state="disabled")
             self.button_eliminar.config(state="normal")
             self.horario_inicial = self.combo_horario.get()  # Guarda el horario original
+            self.salon_inicial = self.combo_salon.get()
+            self.nombre_grupo_inicial = self.entry_nombre.get()
 
             messagebox.showinfo("Éxito", "Grupo encontrado y cargado.")
         except Exception as e:
@@ -460,6 +500,84 @@ class GruposFrame(tk.Frame):
                 if not horario_id:
                     messagebox.showerror("Error", "Error al obtener el horario actual.")
                     return
+            # Validación del horario solo si cambió
+            if horario_info != self.horario_inicial:
+                horario_parts = horario_info.split(" - ")
+                if len(horario_parts) != 3:
+                    messagebox.showerror("Error", "El formato del horario es incorrecto.")
+                    return
+                dia, hora_inicio, hora_fin = horario_parts
+                query_horario = """
+                    SELECT horario_id 
+                    FROM horarios 
+                    WHERE dia = %s AND hora_inicio = %s AND hora_fin = %s
+                """
+                horario_id = self.db_connection.fetch_all(query_horario, (dia, hora_inicio, hora_fin))
+                if not horario_id:
+                    messagebox.showerror("Error", "Error al obtener información del horario.")
+                    return
+            else:
+                # Si no cambió, usar el horario actual
+                query_horario = """
+                    SELECT dia, hora_inicio, hora_fin 
+                    FROM horarios 
+                    WHERE horario_id = (
+                        SELECT horario_id 
+                        FROM grupos 
+                        WHERE grupo_id = %s
+                    )
+                """
+                horario_data = self.db_connection.fetch_all(query_horario, (grupo_id,))
+                if not horario_data:
+                    messagebox.showerror("Error", "Error al obtener el horario actual.")
+                    return
+                dia, hora_inicio, hora_fin = horario_data[0]  # Extraer valores del horario actual
+
+            # Validación del salón si cambió
+            if salon_nombre != self.salon_inicial or horario_info != self.horario_inicial:
+                # Validar superposición de horarios en el salón
+                query_validacion_salon = """
+                    SELECT g.grupo_id 
+                    FROM grupos g
+                    JOIN horarios h ON g.horario_id = h.horario_id
+                    JOIN salones s ON g.salon_id = s.salon_id
+                    WHERE s.nombre = %s AND h.dia = %s
+                    AND (
+                        (h.hora_inicio < %s AND h.hora_fin > %s) OR 
+                        (h.hora_inicio < %s AND h.hora_fin > %s) OR
+                        (h.hora_inicio >= %s AND h.hora_fin <= %s)
+                    )
+                """
+                resultado_validacion_salon = self.db_connection.fetch_all(
+                    query_validacion_salon, 
+                    (salon_nombre, dia, hora_fin, hora_fin, hora_inicio, hora_inicio, hora_inicio, hora_fin)
+                )
+
+                if resultado_validacion_salon:
+                    messagebox.showerror(
+                        "Error", "El salón ya está asignado a otro grupo en este horario. Seleccione otro."
+                    )
+                    return
+
+            
+            # Verificar si el valor del Entry de nombre cambió
+            if nombre_grupo != self.nombre_grupo_inicial:
+                # Validar que el nombre de grupo no se repita para la misma materia (considerando asignaciones)
+                query_validacion = """
+                    SELECT g.grupo_id 
+                    FROM grupos g
+                    JOIN asignaciones a ON g.asignacion_id = a.asignacion_id
+                    WHERE g.nombre = %s AND a.materia_id = %s
+                """
+                result_validacion = self.db_connection.fetch_all(query_validacion, (nombre_grupo, materia_id[0][0]))
+
+                if result_validacion:
+                    messagebox.showerror(
+                        "Error", f"Ya existe un grupo con el nombre '{nombre_grupo}' para la materia '{materia_nombre}'."
+                    )
+                    return
+
+
 
             query_grupo = """
                 UPDATE grupos
@@ -468,7 +586,6 @@ class GruposFrame(tk.Frame):
                 WHERE grupo_id = %s
             """
             self.db_connection.execute_query(query_grupo, (nombre_grupo, asignacion_id[0][0], salon_id[0][0], horario_id[0][0], grupo_id))
-
             messagebox.showinfo("Éxito", "Grupo actualizado correctamente.")
             self.limpiar_campos()
             self.button_guardar.config(state="disabled")
