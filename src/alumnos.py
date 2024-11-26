@@ -120,9 +120,12 @@ class AlumnosFrame(tk.Frame):
         self.button_eliminar = tk.Button(self.frame_botones, text="Eliminar", command=self.eliminar_alumno, state="disabled")
         self.button_actualizar = tk.Button(self.frame_botones, text="Actualizar", command=self.actualizar_alumno, state="disabled")
         self.button_cancelar = tk.Button(self.frame_botones, text="Cancelar", command=self.cancelar_alumno, state="disabled")
-
-        #mostrar opciones de creacion, guardardo y eliminacion solo a un usuario administrador
-        if self.user_info['TIPO'].lower() == 'administrador':   
+        
+        if self.user_info['TIPO'].lower() == 'administrador': 
+            #BOTON QUE CONTROLA EL FLUJO DEL PREREGISTRO
+            self.btn_preregistro = tk.Button(self.frame_botones, text="Activar Prerregistro",command=self.activar_prerregistro)
+            self.btn_preregistro.grid(row=0, column=5, padx=5)
+  
             self.button_crear.grid(row=0, column=0, padx=5)
             
             self.button_guardar.grid(row=0, column=1, padx=5)
@@ -144,7 +147,97 @@ class AlumnosFrame(tk.Frame):
     def trigger_combo_seleccionadas(self, event):
         self.button_quitar.config(state="normal")
 
-    #funcion del boton de agregar grupo (preregistro)
+    def activar_prerregistro(self):
+        try:
+            # Consulta para verificar si el prerregistro ya existe
+            query = "SELECT estado FROM acciones WHERE descripcion = 'pre_registro'"
+            registro = self.db_connection.fetch_one(query)
+
+            if registro:  # Si el registro ya existe
+                if registro[0] == 'activo':
+                    # Prerregistro activo, preguntar si desea cerrarlo
+                    respuesta = messagebox.askyesno("Prerregistro Activo", 
+                                                    "El prerregistro ya está activo. ¿Desea cerrarlo?")
+                    if respuesta:
+                        # Cerrar el prerregistro
+                        update_query = "UPDATE acciones SET estado = 'cerrado' WHERE descripcion = 'pre_registro'"
+                        self.db_connection.execute_query(update_query)
+                        self.generarInscripcionesEnBaseAlPreregistro()
+                        messagebox.showinfo("Prerregistro", "El prerregistro se ha cerrado exitosamente.")
+                else:
+                    # Prerregistro inactivo, preguntar si desea activarlo
+                    respuesta = messagebox.askyesno("Prerregistro Inactivo", 
+                                                    "El prerregistro está inactivo. ¿Desea activarlo?")
+                    if respuesta:
+                        update_query = "UPDATE acciones SET estado = 'activo' WHERE descripcion = 'pre_registro'"
+                        self.db_connection.execute_query(update_query)
+                        messagebox.showinfo("Prerregistro", "El prerregistro se ha activado exitosamente.")
+            else:
+                # Si no existe un registro de 'pre_registro', crearlo y activarlo
+                insert_query = "INSERT INTO acciones (descripcion, estado) VALUES ('pre_registro', 'activo')"
+                self.db_connection.execute_query(insert_query)
+                messagebox.showinfo("Prerregistro", "El prerregistro se ha creado y activado exitosamente.")
+
+        except Exception as e:
+            # Manejo de errores
+            messagebox.showerror("Error", f"Error al gestionar el prerregistro: {e}")
+
+
+    def generarInscripcionesEnBaseAlPreregistro(self):
+        try:
+            # Obtener los registros del pre_registro
+            query_preregistro = "SELECT alumno_id, grupo_id FROM pre_registro"
+            registros = self.db_connection.fetch_all(query_preregistro)
+
+            if not registros:
+                messagebox.showinfo("Prerregistro", "No hay registros en el pre_registro para procesar.")
+                return
+
+            for registro in registros:
+                alumno_id = registro[0]  # Usar el índice para obtener alumno_id
+                grupo_id = registro[1]  # Usar el índice para obtener grupo_id
+
+                # Verificar si el grupo tiene un salón asignado
+                query_grupo = "SELECT salon_id FROM grupos WHERE grupo_id = %s"
+                grupo = self.db_connection.fetch_one(query_grupo, (grupo_id,))
+                
+                if not grupo or grupo[0] is None:  # Usar el índice para verificar salon_id
+                    messagebox.showwarning("Prerregistro", f"El grupo {grupo_id} no tiene un salón asignado.")
+                    continue
+
+                salon_id = grupo[0]  # Usar el índice para obtener salon_id
+
+                # Verificar si hay espacio disponible en el salón
+                query_salon = "SELECT capacidad FROM salones WHERE salon_id = %s"
+                salon = self.db_connection.fetch_one(query_salon, (salon_id,))
+
+                if not salon or salon[0] <= 0:  # Usar el índice para verificar capacidad
+                    messagebox.showwarning("Prerregistro", f"No hay espacio disponible en el salón con el ID {salon_id}.")
+                    continue
+
+                # Generar inscripción
+                insert_inscripcion = """
+                    INSERT INTO inscripciones (alumno_id, grupo_id) 
+                    VALUES (%s, %s)
+                """
+                self.db_connection.execute_query(insert_inscripcion, (alumno_id, grupo_id))
+
+                # Restar espacio en el salón
+                update_salon = "UPDATE salones SET capacidad = capacidad - 1 WHERE salon_id = %s"
+                self.db_connection.execute_query(update_salon, (salon_id,))
+
+            # Eliminar registros del pre_registro después de procesarlos
+            delete_preregistro = "DELETE FROM pre_registro"
+            self.db_connection.execute_query(delete_preregistro)
+
+            messagebox.showinfo("Prerregistro", "Las inscripciones se han generado exitosamente.")
+
+        except Exception as e:
+            # Manejo de errores
+            messagebox.showerror("Error", f"Error al generar las inscripciones: {e}")
+
+
+
     def agregar_grupo(self):
         if self.combo_materias_disponibles.get() == "":
             messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
