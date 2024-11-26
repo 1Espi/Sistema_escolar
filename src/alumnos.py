@@ -250,6 +250,10 @@ class AlumnosFrame(tk.Frame):
         
         id_grupo_a_agregar = re.search(r'\(ID:(\d+)\)', self.combo_materias_disponibles.get()).group(1)
         
+        if materia_a_agregar in nombres_materias_seleccionadas:
+            messagebox.showerror("Error", "No se puede agregar la misma materia dos veces")
+            return
+        
         query = """
                 SELECT 
                     g1.grupo_id AS grupo_1,
@@ -276,11 +280,7 @@ class AlumnosFrame(tk.Frame):
             if result:
                 messagebox.showerror("Error", f"""No se puede agregar este grupo\nEl horario del grupo {result[0][0]} de {result[0][3]} a {result[0][4]} el {result[0][2]}\nEntra en conflicto con el grupo {result[0][1]} de {result[0][5]} a {result[0][6]} el {result[0][7]}\n""")
                 return
-            
-        if materia_a_agregar in nombres_materias_seleccionadas:
-            messagebox.showerror("Error", "No se puede agregar la misma materia dos veces")
-            return
-        
+      
         self.lista_combo_seleccionadas.append(self.combo_materias_disponibles.get())
         self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
         self.lista_combo_disponibles.remove(self.combo_materias_disponibles.get())
