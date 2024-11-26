@@ -336,17 +336,17 @@ class AlumnosFrame(tk.Frame):
 
         
         #funcion del boton de quitar grupo (preregistro)
-        def quitar_grupo(self):
-            if self.combo_materias_seleccionadas.get() == "":
-                messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
-                return
-            self.combo_materias_seleccionadas.get()
-            self.lista_combo_disponibles.append(self.combo_materias_seleccionadas.get())
-            self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
-            self.lista_combo_seleccionadas.remove(self.combo_materias_seleccionadas.get())
-            self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
-            self.combo_materias_seleccionadas.set("")
-            self.button_quitar.config(state="disabled")
+    def quitar_grupo(self):
+        if self.combo_materias_seleccionadas.get() == "":
+            messagebox.showerror("Error", "No se ha seleccionado ningun grupo")
+            return
+        self.combo_materias_seleccionadas.get()
+        self.lista_combo_disponibles.append(self.combo_materias_seleccionadas.get())
+        self.combo_materias_disponibles.config(values=self.lista_combo_disponibles)
+        self.lista_combo_seleccionadas.remove(self.combo_materias_seleccionadas.get())
+        self.combo_materias_seleccionadas.config(values=self.lista_combo_seleccionadas)
+        self.combo_materias_seleccionadas.set("")
+        self.button_quitar.config(state="disabled")
 
     #funcion para cargar todas las carreras
     def cargar_carreras(self):
