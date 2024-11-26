@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, END
 from utilities.connection import MySQLConnection
+import re
 
 class GruposFrame(tk.Frame):
     def __init__(self, parent, container):
@@ -210,6 +211,10 @@ class GruposFrame(tk.Frame):
             if not (grupo_id and nombre_grupo and materia_nombre and maestro_nombre and salon_nombre and horario_info):
                 messagebox.showerror("Error", "Todos los campos son obligatorios.")
                 return
+            
+            if not re.fullmatch(r"D\d{2}", nombre_grupo):
+                messagebox.showerror("Error", "El nombre del grupo debe tener el formato 'DXX', donde XX son dos dígitos.")
+                return
 
             query_materia = "SELECT materia_id FROM materias WHERE nombre = %s"
             materia_id = self.db_connection.fetch_all(query_materia, (materia_nombre,))
@@ -368,6 +373,10 @@ class GruposFrame(tk.Frame):
             if not (grupo_id and nombre_grupo and materia_nombre and maestro_nombre and salon_nombre and horario_info):
                 messagebox.showerror("Error", "Todos los campos son obligatorios.")
                 return
+            # Validación del formato del nombre del grupo
+            if not re.fullmatch(r"D\d{2}", nombre_grupo):
+                messagebox.showerror("Error", "El nombre del grupo debe tener el formato 'DXX', donde XX son dos dígitos.")
+                return
 
             query_materia = "SELECT materia_id FROM materias WHERE nombre = %s"
             materia_id = self.db_connection.fetch_all(query_materia, (materia_nombre,))
@@ -475,6 +484,17 @@ class GruposFrame(tk.Frame):
                 messagebox.showerror("Error", "Por favor, ingresa el ID del grupo.")
                 return
 
+            # Verificar si hay registros asociados en pre_registro
+            query_verificar = "SELECT COUNT(*) FROM pre_registro WHERE grupo_id = %s"
+            registros_asociados = self.db_connection.fetch_all(query_verificar, (grupo_id,))
+
+            if registros_asociados[0][0] > 0:
+                messagebox.showerror(
+                    "Error", 
+                    "No se puede eliminar este grupo porque tiene registros asociados en el pre-registro."
+                )
+                return
+
             respuesta = messagebox.askyesno("Confirmar", "¿Estás seguro de que deseas eliminar este grupo?")
             if not respuesta:
                 return
@@ -490,6 +510,7 @@ class GruposFrame(tk.Frame):
         except Exception as e:
             self.db_connection.connection.rollback()
             messagebox.showerror("Error", f"Ocurrió un error al eliminar el grupo: {str(e)}")
+
 
 
     def limpiar_campos(self):
