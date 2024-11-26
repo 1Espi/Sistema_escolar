@@ -7,6 +7,7 @@ class GruposFrame(tk.Frame):
     def __init__(self, parent, container):
         super().__init__(container)
         self.parent = parent
+        self.user_info = self.parent.user_info
         self.db_connection = MySQLConnection()
         self.db_connection.connect()
         self.setup_ui()
@@ -14,6 +15,22 @@ class GruposFrame(tk.Frame):
         self.cargar_maestros()
         self.cargar_salones()
         self.cargar_horarios()
+        if self.user_info['TIPO'].lower() == 'maestro':
+            query = "SELECT maestro_id FROM maestros WHERE usuario_id = %s"
+            result = self.db_connection.fetch_all(query, (self.user_info['ID'],))
+            if not result:
+                messagebox.showerror("Error", "No se encontró información de maestro asociada a este usuario")
+                return
+            self.button_actualizar.config(state="disabled")
+            self.button_cancelar.config(state="disabled")
+            self.button_crear.config(state="disabled")
+            self.button_eliminar.config(state="disabled")
+            self.button_guardar.config(state="disabled")
+            self.entry_nombre.config(state="disabled")
+            self.combo_salon.config(state="disabled")
+            self.combo_horario.config(state="disabled")
+            self.combo_maestro.config(state="disabled")
+            self.combo_materia.config(state="disabled")
 
     def setup_ui(self):
         title = tk.Label(self, text="Gestión de Grupos", font=("Helvetica", 16, "bold"))
@@ -79,6 +96,8 @@ class GruposFrame(tk.Frame):
         
         self.button_cancelar = tk.Button(self, text="Cancelar", command=self.limpiar_campos, state="disabled")
         self.button_cancelar.grid(row=11, column=4, sticky="ew", padx=5)
+        
+
 
     def cargar_materias(self):
         query = "SELECT nombre FROM materias"
@@ -370,6 +389,7 @@ class GruposFrame(tk.Frame):
             self.entry_id.delete(0, 'end')
             self.entry_id.insert(0,grupo[0])
             self.entry_id.config(state="disabled")
+            self.entry_nombre.config(state="normal")
             self.entry_nombre.delete(0, 'end')
             self.entry_nombre.insert(0, grupo[1])
             self.combo_salon.set(grupo[2])
@@ -397,6 +417,26 @@ class GruposFrame(tk.Frame):
             self.nombre_grupo_inicial = self.entry_nombre.get()
 
             messagebox.showinfo("Éxito", "Grupo encontrado y cargado.")
+            if self.user_info['TIPO'].lower() == 'maestro':
+                query = "SELECT maestro_id FROM maestros WHERE usuario_id = %s"
+                result = self.db_connection.fetch_all(query, (self.user_info['ID'],))
+                if not result:
+                    messagebox.showerror("Error", "No se encontró información de maestro asociada a este usuario")
+                    return
+                self.button_actualizar.config(state="disabled")
+                self.button_cancelar.config(state="disabled")
+                self.button_crear.config(state="disabled")
+                self.button_eliminar.config(state="disabled")
+                self.button_guardar.config(state="disabled")
+                self.entry_id.config(state="disabled")
+                self.entry_nombre.config(state="disabled")
+                self.combo_salon.config(state="disabled")
+                self.combo_horario.config(state="disabled")
+                self.combo_maestro.config(state="disabled")
+                self.combo_materia.config(state="disabled")
+
+
+
         except Exception as e:
             messagebox.showerror("Error", f"Ocurrió un error al buscar el grupo: {str(e)}")
 
