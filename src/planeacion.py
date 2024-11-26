@@ -143,4 +143,3 @@ class PlaneacionFrame(tk.Frame):
 
         # Mostrar los nombres de los alumnos inscritos
         messagebox.showinfo(f"Alumnos inscritos en {grupo_nombre}", alumnos_str)
-
