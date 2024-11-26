@@ -191,6 +191,15 @@ class HorariosFrame(tk.Frame):
             return
 
         if messagebox.askyesno("Confirmar", "¿Estás seguro de que deseas eliminar este horario?"):
+                        # Verificar si el horario está asignado a un grupo
+            query_verificacion = "SELECT COUNT(*) FROM grupos WHERE horario_id = %s"
+            resultado = self.db_connection.fetch_all(query_verificacion, (horario_id,))
+
+            if resultado[0][0] > 0:  # Si hay registros asociados
+                messagebox.showerror(
+                    "Error", "El horario está asignado a un grupo, no es posible eliminar."
+                )
+                return
             query = "DELETE FROM horarios WHERE horario_id = %s"
             self.db_connection.execute_query(query, (horario_id,))
             messagebox.showinfo("Éxito", "Horario eliminado con éxito.")
