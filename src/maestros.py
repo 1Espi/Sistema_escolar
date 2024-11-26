@@ -25,6 +25,17 @@ class MaestrosFrame(tk.Frame):
         self.cargar_carreras()
         self.cargar_usuarios()
         self.cargar_materias()
+        
+        if self.user_info['TIPO'].lower() == 'maestro':
+            query = "SELECT maestro_id FROM maestros WHERE usuario_id = %s"
+            result = self.db_connection.fetch_all(query, (self.user_info['ID'],))
+            if not result:
+                messagebox.showerror("Error", "No se encontró información de maestro asociada a este usuario")
+                return
+            self.id_busqueda.config(state="normal")
+            self.id_busqueda.insert(0, result[0][0])
+            self.id_busqueda.config(state="disabled")
+            self.cancelar_maestro()
 
     def setup_ui(self):
         title = tk.Label(self, text="Maestros", font=("Helvetica", 16, "bold"))
@@ -32,10 +43,12 @@ class MaestrosFrame(tk.Frame):
         
         #ENTRYS
         
-        tk.Label(self, text="Buscar por código:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
         self.id_busqueda = tk.Entry(self, state="normal")
-        self.id_busqueda.grid(row=1, column=1, sticky="w", padx=5)
-        tk.Button(self, text="Buscar", command=self.buscar_maestro).grid(row=1, column=2, padx=5, sticky='w')
+
+        if self.user_info['TIPO'].lower() == 'administrador':
+            tk.Label(self, text="Buscar por código:").grid(row=1, column=0, sticky="e", padx=5, pady=5)
+            self.id_busqueda.grid(row=1, column=1, sticky="w", padx=5)
+            tk.Button(self, text="Buscar", command=self.buscar_maestro).grid(row=1, column=2, padx=5, sticky='w')
 
         #ENTRYS DE LA IZQUIERDA
         tk.Label(self, text="Código de maestro:").grid(row=2, column=0, sticky="e", padx=5, pady=5)
@@ -102,18 +115,20 @@ class MaestrosFrame(tk.Frame):
         self.frame_botones.grid(row=8, column=0, columnspan=100, pady=10)
         
         self.button_crear = tk.Button(self.frame_botones, text="Crear", command=self.crear_maestro)
-        self.button_crear.grid(row=0, column=0, padx=5)
-        
         self.button_guardar = tk.Button(self.frame_botones, text="Guardar", command=self.guardar_maestro, state="disabled")
-        self.button_guardar.grid(row=0, column=1, padx=5)
-        
         self.button_actualizar = tk.Button(self.frame_botones, text="Actualizar", command=self.actualizar_maestro, state="disabled")
+        self.button_eliminar = tk.Button(self.frame_botones, text="Eliminar", command=self.eliminar_maestro, state="disabled")
+        self.button_cancelar = tk.Button(self.frame_botones, text="Cancelar", command=self.cancelar_maestro, state="disabled")
+
+        if self.user_info['TIPO'].lower() == 'administrador':
+            self.button_crear.grid(row=0, column=0, padx=5)
+            
+            self.button_guardar.grid(row=0, column=1, padx=5)
+        
+            self.button_eliminar.grid(row=0, column=3, padx=5)
+
         self.button_actualizar.grid(row=0, column=2, padx=5)
         
-        self.button_eliminar = tk.Button(self.frame_botones, text="Eliminar", command=self.eliminar_maestro, state="disabled")
-        self.button_eliminar.grid(row=0, column=3, padx=5)
-    
-        self.button_cancelar = tk.Button(self.frame_botones, text="Cancelar", command=self.cancelar_maestro, state="disabled")
         self.button_cancelar.grid(row=0, column=4, padx=5)
 
     def limpiar_treeview(self):
@@ -470,7 +485,6 @@ class MaestrosFrame(tk.Frame):
         self.cancelar_maestro()
     
     def cancelar_maestro(self):
-        self.id_busqueda.delete(0, END)
         for entry in [self.entry_codigo,  self.entry_id, self.entry_nombre, self.entry_apellido_paterno, self.entry_apellido_materno, self.entry_correo, self.combo_grado_estudios, self.combo_carrera, self.combo_materia]:
             entry.config(state="normal")
             entry.delete(0, END)
@@ -490,5 +504,10 @@ class MaestrosFrame(tk.Frame):
         self.button_eliminar.config(state="disabled")
         self.button_cancelar.config(state="disabled")
 
+        if self.user_info['TIPO'].lower() == 'maestro':
+            self.buscar_maestro()
+        else:
+            self.id_busqueda.delete(0, END)
+            
 
    
